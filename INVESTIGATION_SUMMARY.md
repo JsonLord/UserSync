@@ -17,13 +17,13 @@ The SyncUsers frontend presents a set of interactive features for audience simul
 
 ## Investigation of the Backend Codebase
 While the initial `app.py` in the provided branch only exposed persona generation, much of the underlying logic was already present in the `tinytroupe` package:
-- **Simulation Management:** `SimulationManager` in `tinytroupe/simulation_manager.py` handles the lifecycle of simulations.
-- **Engagement Prediction:** `EngagementPredictor` in `tinytroupe/ml_models.py` uses heuristics to predict reactions.
-- **Content Generation:** `ContentVariantGenerator` in `tinytroupe/content_generation.py` uses LLMs to generate variants.
-- **Network Metrics:** `NetworkTopology` in `tinytroupe/social_network.py` provides basic graph metrics.
+- **Simulation Management:** `SimulationManager` in `backend/tinytroupe/simulation_manager.py` handles the lifecycle of simulations.
+- **Engagement Prediction:** `EngagementPredictor` in `backend/tinytroupe/ml_models.py` uses heuristics to predict reactions.
+- **Content Generation:** `ContentVariantGenerator` in `backend/tinytroupe/content_generation.py` uses LLMs to generate variants.
+- **Network Metrics:** `NetworkTopology` in `backend/tinytroupe/social_network.py` provides basic graph metrics.
 
 ## Improvements Implemented
-I have updated `backend_investigation/app.py` to bridge these gaps:
+I have updated `backend/app.py` to bridge these gaps:
 1. **Exposed Missing Endpoints:** Added Gradio tabs and endpoints for Simulation, Engagement Prediction, Content Engine, and Network Analytics.
 2. **Standardized API Names:** Ensured all `api_name` identifiers match the provided documentation (e.g., `/run_simulation`).
 3. **Integration:** Linked the Gradio UI directly to the `SimulationManager` and other utility classes.

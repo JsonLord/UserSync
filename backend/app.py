@@ -11,7 +11,7 @@ from tinytroupe.simulation_manager import SimulationManager, SimulationConfig
 from tinytroupe.agent.social_types import Content
 
 HF_TOKEN = os.getenv("HF_TOKEN") # Ensure this is set in Space secrets
-REPO_ID = "harvesthealth/tiny_factory"
+REPO_ID = os.getenv("HF_REPO_ID", "harvesthealth/tiny_factory")
 PERSONA_BASE_FILE = "persona_base.json"
 
 # Initialize Simulation Manager
