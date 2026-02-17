@@ -17,6 +17,7 @@ import ChatPage from './components/ChatPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'simulation' | 'conversation' | 'chat'>('landing');
+  const [currentSimulationId, setCurrentSimulationId] = useState<string | null>(null);
 
   const startSimulation = () => {
     setCurrentView('simulation');
@@ -31,7 +32,8 @@ function App() {
     setCurrentView('conversation');
   };
 
-  const openChat = () => {
+  const openChat = (simId: string | null) => {
+    setCurrentSimulationId(simId);
     setCurrentView('chat');
   };
 
@@ -50,11 +52,11 @@ function App() {
   }
 
   if (currentView === 'conversation') {
-    return <ConversationPage onBack={goBackToSimulation} />;
+    return <ConversationPage onBack={goBackToSimulation} simulationId={currentSimulationId} />;
   }
 
   if (currentView === 'chat') {
-    return <ChatPage onBack={goBackToSimulation} />;
+    return <ChatPage onBack={goBackToSimulation} simulationId={currentSimulationId} />;
   }
 
   return (

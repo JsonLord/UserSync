@@ -1,17 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Plotly from 'plotly.js';
-import { X, Linkedin, Globe, MapPin, User, Briefcase, Users } from 'lucide-react';
+import { X, Linkedin, Globe, MapPin, User, Briefcase, Users, Sparkles } from 'lucide-react';
 import Button from './ui/Button';
+
+import { gradioService } from '../services/gradioService';
 
 interface SimulationGraphProps {
   isBuilding: boolean;
   societyType: string;
+  simulationId: string | null;
   onStartChat?: () => void;
 }
 
-const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyType, onStartChat }) => {
+const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyType, simulationId, onStartChat }) => {
   const graphDiv = useRef<HTMLDivElement>(null);
   const [selectedProfile, setSelectedProfile] = useState<{ x: number, y: number, data: any } | null>(null);
+  const [isLoadingPersona, setIsLoadingPersona] = useState(false);
 
   // Close popup if building starts
   useEffect(() => {
@@ -21,43 +25,73 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
   useEffect(() => {
     if (!graphDiv.current || isBuilding) return;
 
-    // --- Dynamic Data Generation based on Society Type ---
-    const isTech = societyType.includes('Tech') || societyType.includes('Founders');
-    
-    const N = isTech ? 120 : 80; 
-    const radius = isTech ? 0.18 : 0.22; 
-    const nodes = [];
+    const fetchAndRenderGraph = async () => {
+      let nodes: any[] = [];
+      let edgeX: (number | null)[] = [];
+      let edgeY: (number | null)[] = [];
+      const isTech = societyType.includes('Tech') || societyType.includes('Founders');
 
-    // Create nodes
-    for (let i = 0; i < N; i++) {
-      nodes.push({
-        x: Math.random(),
-        y: Math.random(),
-        connections: 0,
-        // Mock data for the popup
-        role: isTech ? ['Founder', 'CTO', 'Product Lead', 'VC'][Math.floor(Math.random() * 4)] : ['Journalist', 'Reader', 'Editor', 'Subscriber'][Math.floor(Math.random() * 4)],
-        location: ['New York, USA', 'London, UK', 'Berlin, DE', 'Paris, FR'][Math.floor(Math.random() * 4)]
-      });
-    }
+      try {
+        if (simulationId) {
+          const graphData = await gradioService.getNetworkGraph(simulationId);
+          if (graphData && graphData.nodes) {
+             // Assign random positions if not present
+             nodes = graphData.nodes.map((n: any) => ({
+                ...n,
+                x: n.x ?? Math.random(),
+                y: n.y ?? Math.random(),
+                connections: 0
+             }));
 
-    // Create edges
-    const edgeX: (number | null)[] = [];
-    const edgeY: (number | null)[] = [];
-    
-    for (let i = 0; i < N; i++) {
-      for (let j = i + 1; j < N; j++) {
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+             if (graphData.edges) {
+                graphData.edges.forEach((edge: any) => {
+                   const source = nodes.find(n => n.name === edge.source || n.id === edge.source);
+                   const target = nodes.find(n => n.name === edge.target || n.id === edge.target);
+                   if (source && target) {
+                      source.connections++;
+                      target.connections++;
+                      edgeX.push(source.x, target.x, null);
+                      edgeY.push(source.y, target.y, null);
+                   }
+                });
+             }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch real graph:", error);
+      }
+
+      // Fallback to random if failed or no ID
+      if (nodes.length === 0) {
+        const N = isTech ? 120 : 80;
+        const radius = isTech ? 0.18 : 0.22;
         
-        if (dist < radius) {
-          nodes[i].connections++;
-          nodes[j].connections++;
-          edgeX.push(nodes[i].x, nodes[j].x, null);
-          edgeY.push(nodes[i].y, nodes[j].y, null);
+        for (let i = 0; i < N; i++) {
+          nodes.push({
+            name: `Persona ${i}`,
+            x: Math.random(),
+            y: Math.random(),
+            connections: 0,
+            role: isTech ? ['Founder', 'CTO', 'Product Lead', 'VC'][Math.floor(Math.random() * 4)] : ['Journalist', 'Reader', 'Editor', 'Subscriber'][Math.floor(Math.random() * 4)],
+            location: ['New York, USA', 'London, UK', 'Berlin, DE', 'Paris, FR'][Math.floor(Math.random() * 4)]
+          });
+        }
+
+        for (let i = 0; i < N; i++) {
+          for (let j = i + 1; j < N; j++) {
+            const dx = nodes[i].x - nodes[j].x;
+            const dy = nodes[i].y - nodes[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < radius) {
+              nodes[i].connections++;
+              nodes[j].connections++;
+              edgeX.push(nodes[i].x, nodes[j].x, null);
+              edgeY.push(nodes[i].y, nodes[j].y, null);
+            }
+          }
         }
       }
-    }
 
     const nodeX = nodes.map(n => n.x);
     const nodeY = nodes.map(n => n.y);
@@ -109,7 +143,7 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
     // @ts-ignore
     Plotly.newPlot(graphDiv.current, [edgeTrace, nodeTrace], layout, config).then((gd) => {
       // @ts-ignore
-      gd.on('plotly_click', (data) => {
+      gd.on('plotly_click', async (data) => {
         const point = data.points[0];
         if (point) {
            const nodeIndex = point.pointNumber;
@@ -120,11 +154,27 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
                y: point.y,
                data: nodeData
            });
+
+           // Fetch real persona data if available
+           if (simulationId && nodeData.name) {
+              setIsLoadingPersona(true);
+              try {
+                const fullData = await gradioService.getPersona(simulationId, nodeData.name);
+                setSelectedProfile(prev => prev ? { ...prev, data: { ...prev.data, ...fullData } } : null);
+              } catch (error) {
+                console.error("Failed to fetch persona details:", error);
+              } finally {
+                setIsLoadingPersona(false);
+              }
+           }
         }
       });
     });
+    };
 
-  }, [isBuilding, societyType]);
+    fetchAndRenderGraph();
+
+  }, [isBuilding, societyType, simulationId]);
 
   return (
     <div className="relative w-full h-full bg-black">
@@ -146,11 +196,11 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
             <div className="p-4 border-b border-gray-800 flex justify-between items-start">
                <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-                    {selectedProfile.data.role[0]}
+                    {selectedProfile.data.role?.[0] || selectedProfile.data.name?.[0] || '?'}
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-sm">{selectedProfile.data.role}</h3>
-                    <p className="text-gray-400 text-xs">Head of Product at BrightCore</p>
+                    <h3 className="text-white font-semibold text-sm">{selectedProfile.data.name || selectedProfile.data.role}</h3>
+                    <p className="text-gray-400 text-xs">{selectedProfile.data.occupation || selectedProfile.data.role || 'Community Member'}</p>
                   </div>
                </div>
                <button 
@@ -162,7 +212,12 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
             </div>
 
             {/* Body */}
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 relative">
+               {isLoadingPersona && (
+                 <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                    <Sparkles size={20} className="text-teal-400 animate-spin" />
+                 </div>
+               )}
                <div className="flex items-center gap-2 text-xs text-gray-400">
                   <span>Built from</span>
                   <Linkedin size={14} className="text-[#0077b5]" />
@@ -171,18 +226,24 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
 
                <div className="flex flex-wrap gap-2">
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300">
-                    <MapPin size={12} /> {selectedProfile.data.location}
+                    <MapPin size={12} /> {selectedProfile.data.location || 'Unknown'}
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300">
-                    <User size={12} /> Millennial
+                    <User size={12} /> {selectedProfile.data.age_group || 'Millennial'}
                   </div>
                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300">
-                    <Briefcase size={12} /> Mid Level
+                    <Briefcase size={12} /> {selectedProfile.data.level || 'Mid Level'}
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-xs text-gray-300">
-                    <Users size={12} /> Creative & Design
+                    <Users size={12} /> {selectedProfile.data.interests?.[0] || 'Creative & Design'}
                   </div>
                </div>
+
+               {selectedProfile.data.description && (
+                 <p className="text-xs text-gray-400 line-clamp-3 italic">
+                   "{selectedProfile.data.description}"
+                 </p>
+               )}
             </div>
 
             {/* Footer */}

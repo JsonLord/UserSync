@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle } from 'lucide-react';
 import SimulationGraph from './SimulationGraph';
+import { gradioService } from '../services/gradioService';
 
 interface SimulationPageProps {
   onBack: () => void;
   onOpenConversation: () => void;
-  onOpenChat: () => void;
+  onOpenChat: (simId: string | null) => void;
 }
 
 // Define the data structure for filters
@@ -54,6 +55,33 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
   const [society, setSociety] = useState('NYT Readers');
   const [viewMode, setViewMode] = useState('Country');
   const [isBuilding, setIsBuilding] = useState(false);
+  const [focusGroups, setFocusGroups] = useState<string[]>(['NYT Readers', 'Tech Founders EU', 'Gen Z Gamers', 'SaaS Investors']);
+  const [simulations, setSimulations] = useState<any[]>([]);
+  const [currentSimId, setCurrentSimId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const groups = await gradioService.listFocusGroups();
+        if (groups && Array.isArray(groups) && groups.length > 0) {
+          setFocusGroups(groups);
+        }
+
+        const sims = await gradioService.listSimulations();
+        if (sims && Array.isArray(sims)) {
+          setSimulations(sims);
+          if (sims.length > 0 && !currentSimId) {
+            setCurrentSimId(sims[0].id);
+            setSociety(sims[0].name);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch sidebar data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Function to simulate rebuilding the graph when settings change
   const handleSettingChange = (setter: (val: string) => void, value: string) => {
@@ -61,10 +89,17 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
     
     setter(value);
     setIsBuilding(true);
-    // Simulate network delay
+
+    // If we changed the society, we might need to find the corresponding simulation ID
+    if (setter === setSociety) {
+       const sim = simulations.find(s => s.name === value);
+       if (sim) setCurrentSimId(sim.id);
+    }
+
+    // Simulate network delay for transition effect
     setTimeout(() => {
         setIsBuilding(false);
-    }, 1500);
+    }, 800);
   };
 
   const currentFilters = VIEW_FILTERS[viewMode] || VIEW_FILTERS['Country'];
@@ -94,10 +129,9 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
                   onChange={(e) => handleSettingChange(setSociety, e.target.value)}
                   className="w-full appearance-none bg-[#111] border border-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option>NYT Readers</option>
-                  <option>Tech Founders EU</option>
-                  <option>Gen Z Gamers</option>
-                  <option>SaaS Investors</option>
+                  {focusGroups.map(group => (
+                    <option key={group}>{group}</option>
+                  ))}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
               </div>
@@ -134,7 +168,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
            {/* Global Chat Button (Sidebar) */}
            <button 
-             onClick={onOpenChat}
+             onClick={() => onOpenChat(currentSimId)}
              className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors border border-gray-700"
            >
               <MessageCircle size={18} />
@@ -146,16 +180,20 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
            {/* History List */}
            <div className="space-y-1 pt-4">
-             <label className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2 block">Recent Tests</label>
-             <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Duality in portraits and sha...
-             </div>
-             <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Volcanoes: Threat or Misun...
-             </div>
-             <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Sustainable Fashion 2024
-             </div>
+             <label className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2 block">Recent Simulations</label>
+             {simulations.length > 0 ? (
+               simulations.slice(0, 5).map(sim => (
+                 <div
+                   key={sim.id}
+                   onClick={() => handleSettingChange(setSociety, sim.name)}
+                   className={`text-sm py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate ${currentSimId === sim.id ? 'text-teal-400 bg-gray-800/30' : 'text-gray-400'}`}
+                 >
+                   {sim.name}
+                 </div>
+               ))
+             ) : (
+               <div className="text-xs text-gray-600 italic px-2">No recent simulations</div>
+             )}
            </div>
         </div>
 
@@ -189,13 +227,18 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
          {/* Graph Container */}
          <div className="flex-1 w-full h-full">
-            <SimulationGraph isBuilding={isBuilding} societyType={society} onStartChat={onOpenChat} />
+            <SimulationGraph
+              isBuilding={isBuilding}
+              societyType={society}
+              simulationId={currentSimId}
+              onStartChat={() => onOpenChat(currentSimId)}
+            />
          </div>
 
          {/* Floating Chat Button (Bottom) */}
          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
             <button 
-              onClick={onOpenChat}
+              onClick={() => onOpenChat(currentSimId)}
               className="flex items-center gap-2 bg-black/80 backdrop-blur-md border border-gray-700 text-white px-6 py-3 rounded-full shadow-2xl hover:bg-gray-900 transition-all hover:scale-105"
             >
               <MessageCircle size={20} />

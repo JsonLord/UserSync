@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
-import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Send, Link as LinkIcon } from 'lucide-react';
+import { gradioService } from '../services/gradioService';
 
 // --- Types ---
 interface ChatPageProps {
   onBack: () => void;
+  simulationId: string | null;
 }
 
 // --- Sub-components (Modular Structure) ---
@@ -40,8 +42,19 @@ const CategoryCard: React.FC<{ title: string; options: { label: string; icon: Re
   </div>
 );
 
-const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
+interface ChatInputProps {
+  onSimulate: () => void;
+  onSendMessage: (msg: string) => void;
+}
+
+const ChatInput: React.FC<ChatInputProps> = ({ onSimulate, onSendMessage }) => {
   const [message, setMessage] = useState('');
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+    onSendMessage(message);
+    setMessage('');
+  };
 
   return (
     <div className="border-t border-gray-800 pt-6 mt-4 bg-[#0a0a0a] px-6 pb-8 md:pb-10 absolute bottom-0 left-0 right-0 z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
@@ -63,6 +76,7 @@ const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
              <button className="hidden md:flex text-xs text-gray-500 hover:text-white transition-colors items-center gap-1 mr-2">
                 Help Me Craft <Sparkles size={12} />
              </button>
+            <ChatButton label="Send" icon={<Send size={14} />} onClick={handleSend} />
             <ChatButton label="Simulate" primary onClick={onSimulate} />
           </div>
         </div>
@@ -73,8 +87,44 @@ const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
 
 // --- Main Page Component ---
 
-const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationId }) => {
   const [showNotification, setShowNotification] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (simulationId) {
+      loadHistory();
+    }
+  }, [simulationId]);
+
+  const loadHistory = async () => {
+    if (!simulationId) return;
+    setIsLoading(true);
+    try {
+      const chatHistory = await gradioService.getChatHistory(simulationId);
+      if (chatHistory && Array.isArray(chatHistory)) {
+        setHistory(chatHistory);
+      }
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (message: string) => {
+    if (!simulationId) {
+      alert("No active simulation selected.");
+      return;
+    }
+    try {
+      const response = await gradioService.sendChatMessage(simulationId, message);
+      setHistory(prev => [...prev, { sender: 'User', message: message }, { sender: 'Assistant', message: response }]);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
+  };
 
   const handleSimulate = () => {
     setShowNotification(true);
@@ -143,9 +193,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
       {/* Scrollable Content Area */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 pb-80"> {/* Large bottom padding for fixed input */}
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-semibold text-center mb-12 mt-4 md:mt-8">What would you like to simulate?</h1>
+          {history.length > 0 ? (
+             <div className="space-y-6 mb-12">
+                {history.map((chat, idx) => (
+                   <div key={idx} className={`flex ${chat.sender === 'User' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[80%] p-4 rounded-2xl ${chat.sender === 'User' ? 'bg-teal-900/30 border border-teal-800 text-teal-50' : 'bg-gray-900 border border-gray-800 text-gray-200'}`}>
+                         <div className="text-[10px] uppercase font-bold text-gray-500 mb-1">{chat.sender}</div>
+                         <div className="text-sm leading-relaxed">{chat.message}</div>
+                      </div>
+                   </div>
+                ))}
+             </div>
+          ) : (
+             <>
+               <h1 className="text-2xl md:text-3xl font-semibold text-center mb-12 mt-4 md:mt-8">What would you like to simulate?</h1>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
              {/* Column 1 */}
              <div className="space-y-12">
                <CategoryCard title="Survey" options={categories['Survey']} />
@@ -164,17 +227,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
              </div>
           </div>
 
-          <div className="flex justify-center mt-16 mb-8">
-             <button className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm px-4 py-2 hover:bg-gray-900 rounded-lg">
-                <Plus size={16} />
-                Request a new context
-             </button>
-          </div>
+               <div className="flex justify-center mt-16 mb-8">
+                  <button className="flex items-center gap-2 text-gray-500 hover:text-gray-300 transition-colors text-sm px-4 py-2 hover:bg-gray-900 rounded-lg">
+                     <Plus size={16} />
+                     Request a new context
+                  </button>
+               </div>
+             </>
+          )}
         </div>
       </div>
 
       {/* Input Footer */}
-      <ChatInput onSimulate={handleSimulate} />
+      <ChatInput onSimulate={handleSimulate} onSendMessage={handleSendMessage} />
     </div>
   );
 };
