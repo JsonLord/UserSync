@@ -28,7 +28,8 @@ function App() {
     setCurrentView('landing');
   };
 
-  const openConversation = () => {
+  const openConversation = (simId: string | null) => {
+    setCurrentSimulationId(simId);
     setCurrentView('conversation');
   };
 

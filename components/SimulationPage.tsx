@@ -5,7 +5,7 @@ import { gradioService } from '../services/gradioService';
 
 interface SimulationPageProps {
   onBack: () => void;
-  onOpenConversation: () => void;
+  onOpenConversation: (simId: string | null) => void;
   onOpenChat: (simId: string | null) => void;
 }
 
@@ -159,7 +159,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
            {/* Actions */}
            <button 
-             onClick={onOpenConversation}
+             onClick={() => onOpenConversation(currentSimId)}
              className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
            >
               <span>Create a new test</span>

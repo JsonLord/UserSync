@@ -26,8 +26,10 @@ View your app in AI Studio: https://ai.studio/apps/drive/1uBpK_suSmvNgTEgSyU7qMe
 
 This is a frontend-only application designed for easy deployment on platforms like **Render**, **Vercel**, or **Netlify**.
 
-- **Build Command:** `npm run build`
+- **Build Command:** `npm run build` (or `yarn build`)
 - **Publish Directory:** `dist`
+
+On **Render**, ensure you are deploying as a **Static Site**.
 
 ### API Integration
 
