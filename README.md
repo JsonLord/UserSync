@@ -10,7 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1uBpK_suSmvNgTEgSyU7qMe
 
 ## Run Locally
 
-**Prerequisites:**  Node.js, Python 3.10+
+**Prerequisites:**  Node.js
 
 
 ### Frontend Setup
@@ -22,15 +22,13 @@ View your app in AI Studio: https://ai.studio/apps/drive/1uBpK_suSmvNgTEgSyU7qMe
 3. Build for production:
    `npm run build` (or `yarn build`)
 
-### Backend Setup (Optional - for local development)
+### Deployment
 
-The backend is located in the `backend/` directory.
+This is a frontend-only application designed for easy deployment on platforms like **Render**, **Vercel**, or **Netlify**.
 
-1. Install Python dependencies:
-   `pip install -r backend/requirements.txt`
-2. Run the Gradio backend:
-   `python backend/app.py`
+- **Build Command:** `npm run build`
+- **Publish Directory:** `dist`
 
 ### API Integration
 
-The frontend is integrated with the Tiny Factory backend via the `gradioService.ts`. It currently connects to the `AUXteam/tiny_factory` Space on Hugging Face.
+The frontend is integrated with the Tiny Factory backend via the `gradioService.ts`. It connects to the `AUXteam/tiny_factory` Space on Hugging Face using the `@gradio/client`.
