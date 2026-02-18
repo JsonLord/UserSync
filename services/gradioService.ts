@@ -21,6 +21,14 @@ class GradioService {
     return result.data[0];
   }
 
+  async identifyPersonas(context: string) {
+    const client = await this.client;
+    const result = await client.predict("/identify_personas", {
+      context: context,
+    });
+    return result.data[0];
+  }
+
   async findBestPersona(criteria: string) {
     const client = await this.client;
     const result = await client.predict("/find_best_persona", {

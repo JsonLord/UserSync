@@ -85,20 +85,19 @@ const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
   const [status, setStatus] = useState<'input' | 'creating' | 'ready' | 'error'>('input');
   const [inputValue, setInputValue] = useState("AI-focused startup founders in Europe");
   const [errorMessage, setErrorMessage] = useState("");
+  const [pickedCount, setPickedCount] = useState(0);
 
   const handleCreate = async () => {
     setStatus('creating');
     try {
-      const result = await gradioService.generatePersonas(
-        "Simulation Demo",
-        inputValue,
-        5
-      );
+      // Use identifyPersonas instead of generatePersonas
+      const result = await gradioService.identifyPersonas(inputValue);
+      setPickedCount(Array.isArray(result) ? result.length : 0);
       onPersonasGenerated(result);
       setStatus('ready');
     } catch (error: any) {
-      console.error("Failed to generate personas:", error);
-      setErrorMessage(error.message || "Failed to generate personas. Please try again.");
+      console.error("Failed to identify personas:", error);
+      setErrorMessage(error.message || "Failed to identify personas. Please try again.");
       setStatus('error');
     }
   };
@@ -106,11 +105,11 @@ const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
   return (
     <SectionLayout
       number="1"
-      title="Generate Any Focus Group"
+      title="Assemble Any Focus Group"
       description={
         <div className="space-y-6">
           <p>
-            Use plain english to describe your target audience, or generate a personal focus group based on your real social media interactions.
+            Describe your target audience, and our system will identify the most relevant personas from our curated Tresor and example agent database.
           </p>
           <div className="space-y-2 pt-2">
              <p className="text-base font-medium text-gray-300">
@@ -147,7 +146,7 @@ const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
                     <span className="absolute right-3 top-3.5 w-0.5 h-5 bg-teal-500 animate-blink"></span>
                 </div>
                 <Button className="w-full py-3" onClick={handleCreate}>
-                   Generate Your Focus Group <Sparkles size={16} className="ml-2" />
+                   Assemble Focus Group from Tresor <Sparkles size={16} className="ml-2" />
                 </Button>
              </div>
           </div>
@@ -170,7 +169,7 @@ const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
           <div className={`transition-all duration-500 absolute z-20 ${status === 'creating' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
              <div className="bg-black/80 backdrop-blur-md border border-gray-700 rounded-full px-8 py-4 flex items-center gap-3 shadow-2xl">
                 <Sparkles className="text-teal-400 animate-pulse" />
-                <span className="text-lg font-medium">Generating Focus Group...</span>
+                <span className="text-lg font-medium">Identifying relevant personas...</span>
              </div>
           </div>
 
@@ -181,7 +180,7 @@ const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
                 <div className="bg-green-500/20 rounded-full p-1">
                     <Check className="w-4 h-4 text-green-500" />
                 </div>
-                <span className="text-sm font-medium text-white whitespace-nowrap">Your Personal Focus Group is Ready</span>
+                <span className="text-sm font-medium text-white whitespace-nowrap">Found {pickedCount} relevant personas. Your Focus Group is Ready</span>
              </div>
              <div className="absolute bottom-2 text-center pointer-events-auto">
                 <button 

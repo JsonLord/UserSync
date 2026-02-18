@@ -55,6 +55,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
   const [society, setSociety] = useState('NYT Readers');
   const [viewMode, setViewMode] = useState('Country');
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isAssembling, setIsAssembling] = useState(false);
   const [focusGroups, setFocusGroups] = useState<string[]>(['NYT Readers', 'Tech Founders EU', 'Gen Z Gamers', 'SaaS Investors']);
   const [simulations, setSimulations] = useState<any[]>([]);
   const [currentSimId, setCurrentSimId] = useState<string | null>(null);
@@ -100,6 +101,33 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
     setTimeout(() => {
         setIsBuilding(false);
     }, 800);
+  };
+
+  const handleAssembleNew = async () => {
+    const context = prompt("Describe the audience for your new focus group:");
+    if (!context) return;
+
+    setIsAssembling(true);
+    setIsBuilding(true);
+    try {
+      const result = await gradioService.identifyPersonas(context);
+      const pickedCount = Array.isArray(result) ? result.length : 0;
+      alert(`Identified ${pickedCount} relevant personas. Assembling your focus group...`);
+
+      // Create simulation for this new group
+      const simName = `Group ${simulations.length + 1}: ${context.substring(0, 20)}...`;
+      const sim = await gradioService.generateSocialNetwork(simName, pickedCount, "scale_free");
+
+      setSimulations(prev => [sim, ...prev]);
+      setCurrentSimId(sim.id);
+      setSociety(sim.name);
+    } catch (error) {
+      console.error("Failed to assemble focus group:", error);
+      alert("Failed to assemble focus group. Please try again.");
+    } finally {
+      setIsAssembling(false);
+      setIsBuilding(false);
+    }
   };
 
   const currentFilters = VIEW_FILTERS[viewMode] || VIEW_FILTERS['Country'];
@@ -159,6 +187,15 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
            {/* Actions */}
            <button 
+             onClick={handleAssembleNew}
+             disabled={isAssembling}
+             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
+           >
+              <span>Assemble new group</span>
+              <Plus size={18} className="text-gray-500 group-hover:text-white" />
+           </button>
+
+           <button
              onClick={() => onOpenConversation(currentSimId)}
              className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
            >

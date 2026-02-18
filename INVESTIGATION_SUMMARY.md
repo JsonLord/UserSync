@@ -8,7 +8,7 @@ The SyncUsers frontend presents a set of interactive features for audience simul
 
 | Frontend Capability | Backend API Endpoint | Status in Original Code |
 |---------------------|----------------------|-------------------------|
-| Generate Focus Group | `/generate_personas` | ✅ Implemented |
+| Assemble Focus Group | `/identify_personas` | ✅ Added (Pick from Tresor/Examples) |
 | Create Social Network | `/create_simulation` | ❌ Missing in `app.py` |
 | Run Experiments | `/run_simulation` | ❌ Missing in `app.py` |
 | Get Insights / Scores | `/predict_engagement` | ❌ Missing in `app.py` |
@@ -25,6 +25,7 @@ While the initial Gradio app only exposed persona generation, much of the underl
 ## Improvements Implemented
 The backend APIs were enhanced to bridge these gaps:
 1. **Exposed Missing Endpoints:** Added Gradio tabs and endpoints for Simulation, Engagement Prediction, Content Engine, and Network Analytics.
+2. **Shift to Persona Assembly:** Per the latest requirements, the persona generation UI has been replaced with an "Assembly" logic. The new `/identify_personas` endpoint filters existing high-quality personas from the Tresor and example agent database instead of generating them from scratch.
 2. **Standardized API Names:** Ensured all `api_name` identifiers match the provided documentation (e.g., `/run_simulation`).
 3. **Integration:** Linked the Gradio UI directly to the `SimulationManager` and other utility classes.
 
