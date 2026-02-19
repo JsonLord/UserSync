@@ -29,24 +29,24 @@ const Hero: React.FC<HeroProps> = ({ onStart }) => {
           {/* Slide 1 */}
           <div className={`absolute top-0 left-0 w-full transition-all duration-1000 ease-in-out transform ${currentSlide === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10 pointer-events-none'}`}>
              <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-              User Simulation <span className="text-gray-400">API</span> for Developers
+              Branding Simulation <span className="text-gray-400">API</span> for Global Teams
             </h1>
             <p className="text-xl text-gray-400 mt-6 max-w-lg">
-              Programmatically test your UX decisions. Integrate accurate user simulation into your CI/CD pipeline. Free for developers.
+              Programmatically test your brand narratives. Integrate accurate audience simulation into your creative workflow. Free for developers.
             </p>
             <div className="flex flex-wrap gap-4 mt-8">
-              <Button variant="primary" size="lg" onClick={onStart}>HF Space Demo</Button>
-              <Button variant="outline" size="lg" onClick={() => window.location.href='#docs'}>Read the Docs</Button>
+              <Button variant="primary" size="lg" onClick={onStart}>Try Branding Simulation</Button>
+              <Button variant="outline" size="lg" onClick={() => window.location.href='#features'}>How it Works</Button>
             </div>
           </div>
 
           {/* Slide 2 */}
           <div className={`absolute top-0 left-0 w-full transition-all duration-1000 ease-in-out transform ${currentSlide === 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`}>
             <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-              Stop guessing. <span className="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">Start simulating.</span>
+              Test your Brand. <span className="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-transparent">Before you launch.</span>
             </h1>
             <p className="text-xl text-gray-400 mt-6 max-w-lg">
-              Validate features with AI-generated user societies before writing a single line of frontend code. The open standard for agentic UX testing.
+              Validate brand voice and campaign ideas with AI-generated focus groups. The new standard for agentic brand testing and narrative validation.
             </p>
             <div className="flex flex-wrap gap-4 mt-8">
               <Button variant="primary" size="lg" onClick={onStart}>Start Building</Button>

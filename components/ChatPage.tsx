@@ -62,14 +62,14 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
       <div className="max-w-5xl mx-auto space-y-4">
         <textarea
           className="w-full h-24 bg-black border border-gray-800 text-gray-200 placeholder-gray-600 p-4 rounded-2xl resize-none focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition-all text-sm leading-relaxed"
-          placeholder="Paste your website link here"
+          placeholder="Paste your brand narrative or campaign copy here"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
         <div className="flex flex-wrap justify-between items-start gap-4">
           <div className="flex gap-2 md:gap-3 flex-wrap">
             <div className="flex flex-col gap-2">
-                <ChatButton label="Website Link for UX Testing" icon={<LinkIcon size={14} />} />
+                <ChatButton label="Brand Asset for Testing" icon={<LinkIcon size={14} />} />
             </div>
             <input
               type="file"

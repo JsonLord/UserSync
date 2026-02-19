@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: blue
 sdk: docker
 app_port: 7860
+hf_oauth: true
 ---
 
 <div align="center">

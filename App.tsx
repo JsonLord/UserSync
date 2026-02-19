@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import TrustedBy from './components/TrustedBy';
@@ -17,6 +18,26 @@ import ChatPage from './components/ChatPage';
 
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'simulation' | 'conversation' | 'chat'>('landing');
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const handleAuth = async () => {
+      try {
+        const oauthResult = await oauthHandleRedirectIfPresent();
+        if (oauthResult) {
+          setUser(oauthResult.userInfo);
+          console.log("Logged in as:", oauthResult.userInfo);
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+      }
+    };
+    handleAuth();
+  }, []);
+
+  const loginWithHF = async () => {
+    window.location.href = await oauthLoginUrl();
+  };
 
   const startSimulation = () => {
     setCurrentView('simulation');
@@ -59,7 +80,7 @@ function App() {
 
   return (
     <div className="bg-black min-h-screen text-white selection:bg-teal-500/30">
-      <Navbar onStart={startSimulation} />
+      <Navbar onStart={startSimulation} onLogin={loginWithHF} user={user} />
       <main>
         <Hero onStart={startSimulation} />
         <TrustedBy />

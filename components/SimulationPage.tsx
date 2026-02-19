@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle, Menu, PanelRightClose } from 'lucide-react';
 import SimulationGraph from './SimulationGraph';
 
 interface SimulationPageProps {
@@ -42,7 +42,20 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
   const [society, setSociety] = useState('User Group 1');
   const [viewMode, setViewMode] = useState('Job Title');
   const [isBuilding, setIsBuilding] = useState(false);
-  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(window.innerWidth > 1200);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(window.innerWidth > 768);
+
+  // Handle window resize for mobile responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsLeftPanelOpen(false);
+        setIsRightPanelOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Function to simulate rebuilding the graph when settings change
   const handleSettingChange = (setter: (val: string) => void, value: string) => {
@@ -59,16 +72,21 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
   const currentFilters = VIEW_FILTERS[viewMode] || VIEW_FILTERS['Country'];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans relative">
       {/* Sidebar */}
-      <aside className="w-[300px] flex-shrink-0 border-r border-gray-800 flex flex-col bg-[#0a0a0a] z-20">
+      <aside className={`fixed md:relative w-[300px] h-full flex-shrink-0 border-r border-gray-800 flex flex-col bg-[#0a0a0a] z-40 transition-all duration-300 ${isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full md:-ml-[300px]'}`}>
         {/* Header */}
         <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
            <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <div className="w-6 h-6 flex items-center justify-center font-bold text-white">Λ</div>
               <span className="font-semibold tracking-tight">SyncUsers</span>
            </div>
-           <button className="text-gray-500 hover:text-white"><PanelLeftClose size={18}/></button>
+           <button
+             onClick={() => setIsLeftPanelOpen(false)}
+             className="text-gray-500 hover:text-white"
+           >
+             <PanelLeftClose size={18}/>
+           </button>
         </div>
 
         {/* Scrollable Content */}
@@ -142,13 +160,13 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
            <div className="space-y-1 pt-4">
              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2 block">Recent Tests</label>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Duality in portraits and sha...
+               Sustainable Luxury Narrative
              </div>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Volcanoes: Threat or Misun...
+               Radical Transparency Voice
              </div>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Sustainable Fashion 2024
+               Gen-Z Greenwash Perception
              </div>
            </div>
         </div>
@@ -172,9 +190,27 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative bg-black overflow-hidden">
          {/* Top Navigation Overlay */}
+         <div className="absolute top-4 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
+             {/* Left Toggle (when sidebar closed) */}
+             <button
+               onClick={() => setIsLeftPanelOpen(true)}
+               className={`pointer-events-auto p-2 bg-gray-900/80 border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-opacity ${isLeftPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+             >
+                <Menu size={20} />
+             </button>
+
+             {/* Right Toggle (when output closed) */}
+             <button
+               onClick={() => setIsRightPanelOpen(true)}
+               className={`pointer-events-auto p-2 bg-gray-900/80 border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-opacity ml-auto ${isRightPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+             >
+                <PanelRightClose size={20} className="rotate-180" />
+             </button>
+         </div>
+
          <div className="absolute top-6 left-6 right-6 z-10 flex justify-center pointer-events-none">
              {/* Legend / Filter Chips */}
-             <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
+             <div className="flex flex-wrap justify-center gap-2 pointer-events-auto max-w-[60%]">
                 {currentFilters.map((filter, idx) => (
                    <FilterChip key={idx} color={filter.color} label={filter.label} />
                 ))}
@@ -199,10 +235,10 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
       </main>
 
       {/* Right Sidebar (Output) */}
-      <aside className={`w-[300px] flex-shrink-0 border-l border-gray-800 flex flex-col bg-[#0a0a0a] z-20 transition-all duration-300 ${isRightPanelOpen ? 'mr-0' : '-mr-[300px]'}`}>
+      <aside className={`fixed right-0 md:relative w-[300px] h-full flex-shrink-0 border-l border-gray-800 flex flex-col bg-[#0a0a0a] z-40 transition-all duration-300 ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full md:-mr-[300px]'}`}>
         <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
            <span className="font-semibold tracking-tight uppercase text-xs text-gray-500">Output</span>
-           <button onClick={() => setIsRightPanelOpen(false)} className="text-gray-500 hover:text-white"><PanelLeftClose size={18} className="rotate-180"/></button>
+           <button onClick={() => setIsRightPanelOpen(false)} className="text-gray-500 hover:text-white"><PanelRightClose size={18}/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
