@@ -67,9 +67,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSimulate, onSendMessage }) => {
         />
         <div className="flex flex-wrap justify-between items-start gap-4">
           <div className="flex gap-2 md:gap-3 flex-wrap">
-            <div className="flex flex-col gap-2">
-                <ChatButton label="Website Link for UX Testing" icon={<LinkIcon size={14} />} />
-            </div>
             <ChatButton label="Upload Images" icon={<Image size={14} />} className="h-fit" />
           </div>
           <div className="flex gap-3 items-center mt-auto">
@@ -138,7 +135,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationId }) => {
     ],
     'Marketing Content': [
       { label: 'Article', icon: <Edit3 size={18} /> },
-      { label: 'Website Link', icon: <Layout size={18} /> },
       { label: 'Advertisement', icon: <Megaphone size={18} /> }
     ],
     'Social Media Posts': [

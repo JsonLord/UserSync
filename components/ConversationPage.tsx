@@ -10,7 +10,7 @@ interface ConversationPageProps {
 }
 
 const ConversationPage: React.FC<ConversationPageProps> = ({ onBack, simulationId }) => {
-  const [activeTab, setActiveTab] = useState('Website Content');
+  const [activeTab, setActiveTab] = useState('Article');
   const [contentText, setContentText] = useState('');
   const [isSimulating, setIsSimulating] = useState(false);
   const [status, setStatus] = useState<'idle' | 'simulating' | 'success' | 'error'>('idle');
@@ -67,7 +67,6 @@ const ConversationPage: React.FC<ConversationPageProps> = ({ onBack, simulationI
 
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-8 mb-4">Marketing Content</h3>
                   <OptionItem icon={<Edit3 />} label="Article" active={activeTab === 'Article'} onClick={() => setActiveTab('Article')} />
-                  <OptionItem icon={<Layout />} label="Website Content" active={activeTab === 'Website Content'} onClick={() => setActiveTab('Website Content')} />
                   <OptionItem icon={<MonitorPlay />} label="Advertisement" active={activeTab === 'Advertisement'} onClick={() => setActiveTab('Advertisement')} />
                </div>
 

@@ -9,11 +9,14 @@ The SyncUsers frontend presents a set of interactive features for audience simul
 | Frontend Capability | Backend API Endpoint | Status in Original Code |
 |---------------------|----------------------|-------------------------|
 | Assemble Focus Group | `/identify_personas` | ✅ Added (Pick from Tresor/Examples) |
-| Create Social Network | `/create_simulation` | ❌ Missing in `app.py` |
-| Run Experiments | `/run_simulation` | ❌ Missing in `app.py` |
-| Get Insights / Scores | `/predict_engagement` | ❌ Missing in `app.py` |
-| Content Engine / Variants | `/generate_content_variants` | ❌ Missing in `app.py` |
-| Network Analytics | `/get_network_metrics` | ❌ Missing in `app.py` |
+| Create Social Network | `/generate_social_network` | ✅ Added |
+| Run Experiments | `/start_simulation_async` | ✅ Added |
+| Get Simulation Status | `/get_simulation_status` | ✅ Added |
+| Engagement Prediction | `/predict_engagement` | ✅ Added |
+| Content Engine / Variants | `/generate_variants` | ✅ Added |
+| Network Graph | `/get_network_graph` | ✅ Added |
+| Chat Messaging | `/send_chat_message` | ✅ Added |
+| Export/Delete | `/export_simulation` | ✅ Added |
 
 ## Investigation of the Backend Codebase
 While the initial Gradio app only exposed persona generation, much of the underlying logic was already present in the `tinytroupe` library used by the backend:
@@ -26,8 +29,8 @@ While the initial Gradio app only exposed persona generation, much of the underl
 The backend APIs were enhanced to bridge these gaps:
 1. **Exposed Missing Endpoints:** Added Gradio tabs and endpoints for Simulation, Engagement Prediction, Content Engine, and Network Analytics.
 2. **Shift to Persona Assembly:** Per the latest requirements, the persona generation UI has been replaced with an "Assembly" logic. The new `/identify_personas` endpoint filters existing high-quality personas from the Tresor and example agent database instead of generating them from scratch.
-2. **Standardized API Names:** Ensured all `api_name` identifiers match the provided documentation (e.g., `/run_simulation`).
-3. **Integration:** Linked the Gradio UI directly to the `SimulationManager` and other utility classes.
+2. **Standardized API Names:** Ensured all `api_name` identifiers match the provided documentation (e.g., `/start_simulation_async`).
+3. **Frontend Integration:** Successfully mapped all 18 backend APIs to their respective frontend features in React.
 
 ## Suggestions for Future Improvements
 

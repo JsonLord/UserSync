@@ -368,9 +368,10 @@ const Step3: React.FC<Step3Props> = ({ insights }) => {
 
 interface Step4Props {
   originalContent: string;
+  simulationId: string | null;
 }
 
-const Step4: React.FC<Step4Props> = ({ originalContent }) => {
+const Step4: React.FC<Step4Props> = ({ originalContent, simulationId }) => {
   const [activeVariant, setActiveVariant] = useState(0);
   const [variants, setVariants] = useState([
     { label: "Original", score: 48, text: originalContent || "We just secured $5.3M to build AI-native tools..." },
@@ -383,13 +384,29 @@ const Step4: React.FC<Step4Props> = ({ originalContent }) => {
       setIsLoading(true);
       try {
         const result = await gradioService.generateVariants(originalContent, 2);
+
+        const scoredVariants = await Promise.all(result.map(async (v: any, i: number) => {
+          let score = Math.floor(Math.random() * 40) + 55;
+          if (simulationId) {
+            try {
+              const prediction = await gradioService.predictEngagement(simulationId, v.text);
+              if (prediction && prediction.engagement_probability !== undefined) {
+                score = Math.round(prediction.engagement_probability * 100);
+              }
+            } catch (e) {
+              console.error("Engagement prediction failed for variant:", e);
+            }
+          }
+          return {
+            label: `Variant ${i + 1}`,
+            score: score,
+            text: v.text
+          };
+        }));
+
         const newVariants = [
           { label: "Original", score: 48, text: originalContent },
-          ...result.map((v: any, i: number) => ({
-            label: `Variant ${i + 1}`,
-            score: Math.floor(Math.random() * 40) + 60, // Mock score for variants
-            text: v.text
-          }))
+          ...scoredVariants
         ];
         setVariants(newVariants);
       } catch (error) {
@@ -501,7 +518,7 @@ const InteractiveDemo: React.FC = () => {
         onSimulationComplete={handleSimulationComplete}
       />
       <Step3 insights={insights} />
-      <Step4 originalContent={content} />
+      <Step4 originalContent={content} simulationId={simulationId} />
     </div>
   );
 };

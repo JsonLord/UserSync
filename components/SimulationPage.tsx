@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle } from 'lucide-react';
+import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle, Trash2, Download, Save } from 'lucide-react';
 import SimulationGraph from './SimulationGraph';
 import { gradioService } from '../services/gradioService';
 
@@ -112,7 +112,6 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
     try {
       const result = await gradioService.identifyPersonas(context);
       const pickedCount = Array.isArray(result) ? result.length : 0;
-      alert(`Identified ${pickedCount} relevant personas. Assembling your focus group...`);
 
       // Create simulation for this new group
       const simName = `Group ${simulations.length + 1}: ${context.substring(0, 20)}...`;
@@ -121,12 +120,43 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
       setSimulations(prev => [sim, ...prev]);
       setCurrentSimId(sim.id);
       setSociety(sim.name);
+
+      if (confirm(`Identified ${pickedCount} personas. Would you like to save this focus group for future use?`)) {
+        await gradioService.saveFocusGroup(simName, sim.id);
+      }
     } catch (error) {
       console.error("Failed to assemble focus group:", error);
       alert("Failed to assemble focus group. Please try again.");
     } finally {
       setIsAssembling(false);
       setIsBuilding(false);
+    }
+  };
+
+  const handleDeleteSimulation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this simulation?")) {
+      try {
+        await gradioService.deleteSimulation(id);
+        setSimulations(prev => prev.filter(s => s.id !== id));
+        if (currentSimId === id) {
+          setCurrentSimId(null);
+          setSociety('NYT Readers');
+        }
+      } catch (error) {
+        console.error("Failed to delete simulation:", error);
+      }
+    }
+  };
+
+  const handleExportSimulation = async () => {
+    if (!currentSimId) return;
+    try {
+      const result = await gradioService.exportSimulation(currentSimId);
+      alert("Simulation exported successfully!");
+      console.log("Export result:", result);
+    } catch (error) {
+      console.error("Failed to export simulation:", error);
     }
   };
 
@@ -223,9 +253,15 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
                  <div
                    key={sim.id}
                    onClick={() => handleSettingChange(setSociety, sim.name)}
-                   className={`text-sm py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate ${currentSimId === sim.id ? 'text-teal-400 bg-gray-800/30' : 'text-gray-400'}`}
+                   className={`text-sm py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer flex items-center justify-between group ${currentSimId === sim.id ? 'text-teal-400 bg-gray-800/30' : 'text-gray-400'}`}
                  >
-                   {sim.name}
+                   <span className="truncate">{sim.name}</span>
+                   <button
+                     onClick={(e) => handleDeleteSimulation(sim.id, e)}
+                     className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-500 transition-opacity p-1"
+                   >
+                     <Trash2 size={14} />
+                   </button>
                  </div>
                ))
              ) : (
@@ -242,6 +278,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
            </div>
 
            <MenuItem icon={<Plus size={16}/>} label="Start Free Trial" highlight />
+           <MenuItem icon={<Download size={16}/>} label="Export Simulation" onClick={handleExportSimulation} />
            <MenuItem icon={<MessageSquare size={16}/>} label="Leave Feedback" />
            <MenuItem icon={<BookOpen size={16}/>} label="Product Guide" />
            <MenuItem icon={<LogOut size={16}/>} label="Log Out" />
@@ -292,10 +329,14 @@ interface MenuItemProps {
   icon: React.ReactNode;
   label: string;
   highlight?: boolean;
+  onClick?: () => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ icon, label, highlight = false }) => (
-  <button className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors ${highlight ? 'text-teal-400 hover:bg-teal-950/30' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+const MenuItem: React.FC<MenuItemProps> = ({ icon, label, highlight = false, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors ${highlight ? 'text-teal-400 hover:bg-teal-950/30' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+  >
     {icon}
     <span>{label}</span>
   </button>
