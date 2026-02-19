@@ -19,8 +19,21 @@ import ChatPage from './components/ChatPage';
 function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'simulation' | 'conversation' | 'chat'>('simulation');
   const [user, setUser] = useState<any>(null);
+  const [config, setConfig] = useState<{ clientId?: string; scopes?: string }>({});
+  const [simulationResult, setSimulationResult] = useState<any>(null);
 
   useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        setConfig(data);
+      } catch (error) {
+        console.error("Failed to fetch config:", error);
+      }
+    };
+    fetchConfig();
+
     const handleAuth = async () => {
       try {
         const oauthResult = await oauthHandleRedirectIfPresent();
@@ -36,7 +49,22 @@ function App() {
   }, []);
 
   const loginWithHF = async () => {
-    window.location.href = await oauthLoginUrl();
+    try {
+      const url = await oauthLoginUrl({
+        clientId: config.clientId,
+        scopes: config.scopes,
+        redirectUrl: window.location.origin + "/"
+      });
+      // Use window.top for redirecting out of the Space iframe
+      if (window.top) {
+        window.top.location.href = url;
+      } else {
+        window.location.href = url;
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Failed to initiate login. See console for details.");
+    }
   };
 
   const startSimulation = () => {
@@ -68,6 +96,8 @@ function App() {
         onOpenChat={openChat}
         user={user}
         onLogin={loginWithHF}
+        simulationResult={simulationResult}
+        setSimulationResult={setSimulationResult}
       />
     );
   }
@@ -77,7 +107,13 @@ function App() {
   }
 
   if (currentView === 'chat') {
-    return <ChatPage onBack={goBackToSimulation} />;
+    return (
+      <ChatPage
+        onBack={goBackToSimulation}
+        simulationResult={simulationResult}
+        setSimulationResult={setSimulationResult}
+      />
+    );
   }
 
   return (

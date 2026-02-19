@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle, Menu, PanelRightClose } from 'lucide-react';
+import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle, Menu, PanelRightClose, RefreshCw } from 'lucide-react';
 import SimulationGraph from './SimulationGraph';
+import { GradioService } from '../services/gradioService';
 
 interface SimulationPageProps {
   onBack: () => void;
@@ -8,6 +9,8 @@ interface SimulationPageProps {
   onOpenChat: () => void;
   user?: any;
   onLogin?: () => void;
+  simulationResult: any;
+  setSimulationResult: (res: any) => void;
 }
 
 // Define the data structure for filters
@@ -40,9 +43,13 @@ const VIEW_FILTERS: Record<string, Array<{ label: string; color: string }>> = {
   ]
 };
 
-const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversation, onOpenChat, user, onLogin }) => {
+const SimulationPage: React.FC<SimulationPageProps> = ({
+  onBack, onOpenConversation, onOpenChat, user, onLogin, simulationResult, setSimulationResult
+}) => {
   const [society, setSociety] = useState('User Group 1');
+  const [societies, setSocieties] = useState<string[]>(['User Group 1']);
   const [viewMode, setViewMode] = useState('Job Title');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [isRightPanelOpen, setIsRightPanelOpen] = useState(window.innerWidth > 1200);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(window.innerWidth > 768);
@@ -56,6 +63,24 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
       }
     };
     window.addEventListener('resize', handleResize);
+
+    // Fetch real focus groups
+    const fetchSocieties = async () => {
+        try {
+            const list = await GradioService.listSimulations();
+            if (list && list.length > 0) {
+                const names = list.map((s: any) => typeof s === 'string' ? s : (s.id || s.name));
+                setSocieties(names);
+                if (!names.includes(society)) {
+                    setSociety(names[0]);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch focus groups", e);
+        }
+    };
+    fetchSocieties();
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -81,7 +106,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
         <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
            <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <div className="w-6 h-6 flex items-center justify-center font-bold text-white">Λ</div>
-              <span className="font-semibold tracking-tight">SyncUsers</span>
+              <span className="font-semibold tracking-tight text-xs">Branding Content Testing</span>
            </div>
            <button
              onClick={() => setIsLeftPanelOpen(false)}
@@ -94,16 +119,16 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
            
-           {/* Current Focus Group Control */}
+           {/* Focus Group Control */}
            <div className="space-y-2">
-              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Current Focus Group</label>
+              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Focus Group</label>
               <div className="relative group">
                 <select 
                   value={society}
                   onChange={(e) => handleSettingChange(setSociety, e.target.value)}
                   className="w-full appearance-none bg-[#111] border border-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option>User Group 1</option>
+                  {societies.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
               </div>
@@ -258,10 +283,54 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs text-gray-500 mb-2">Simulation Results</p>
-              <div className="text-sm text-gray-400 italic text-center py-8">
-                Results will appear here after running a simulation.
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500">Simulation Results</p>
+                {simulationResult && (
+                  <button
+                    onClick={async () => {
+                      setIsRefreshing(true);
+                      try {
+                        const status = await GradioService.getSimulationStatus(society);
+                        setSimulationResult({
+                          status: "Updated",
+                          message: "Latest status gathered from API.",
+                          data: status
+                        });
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setIsRefreshing(false);
+                      }
+                    }}
+                    className="p-1 hover:bg-gray-800 rounded text-gray-500 hover:text-white"
+                    title="Refresh Status"
+                  >
+                    <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
+                  </button>
+                )}
               </div>
+
+              {!simulationResult ? (
+                <div className="text-sm text-gray-400 italic text-center py-8">
+                  Results will appear here after running a simulation.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-medium text-green-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    {simulationResult.status}
+                  </div>
+                  <p className="text-[11px] text-gray-400">{simulationResult.message}</p>
+                  {simulationResult.data && (
+                    <pre className="text-[10px] bg-black/50 p-2 rounded max-h-96 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-gray-300 border border-gray-800">
+                      {JSON.stringify(simulationResult.data, null, 2)}
+                    </pre>
+                  )}
+                  <p className="text-[10px] text-gray-600 mt-4 italic">
+                    Note: Complete simulation results can take up to 30 minutes to be fully processed by the API.
+                  </p>
+                </div>
+              )}
            </div>
         </div>
       </aside>

@@ -6,6 +6,8 @@ import { GradioService } from '../services/gradioService';
 // --- Types ---
 interface ChatPageProps {
   onBack: () => void;
+  simulationResult: any;
+  setSimulationResult: (res: any) => void;
 }
 
 // --- Sub-components (Modular Structure) ---
@@ -25,16 +27,28 @@ const ChatButton: React.FC<{ label: string; primary?: boolean; icon?: React.Reac
   </button>
 );
 
-const CategoryCard: React.FC<{ title: string; options: { label: string; icon: React.ReactNode }[] }> = ({ title, options }) => (
+const CategoryCard: React.FC<{
+  title: string;
+  options: { label: string; icon: React.ReactNode }[];
+  selectedVariation: string;
+  onSelect: (label: string) => void;
+}> = ({ title, options, selectedVariation, onSelect }) => (
   <div className="flex flex-col gap-3">
     <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">{title}</h3>
     <div className="space-y-1">
       {options.map((option) => (
-        <div key={option.label} className="group flex items-center gap-3 p-3 rounded-xl hover:bg-gray-900/80 cursor-pointer border border-transparent hover:border-gray-800 transition-all duration-200">
-          <div className="text-gray-500 group-hover:text-white transition-colors w-5 flex justify-center">
+        <div
+          key={option.label}
+          onClick={() => onSelect(option.label)}
+          className={`group flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all duration-200
+            ${selectedVariation === option.label
+              ? 'bg-teal-900/20 border-teal-500/50 text-white'
+              : 'hover:bg-gray-900/80 border-transparent hover:border-gray-800'}`}
+        >
+          <div className={`${selectedVariation === option.label ? 'text-teal-400' : 'text-gray-500 group-hover:text-white'} transition-colors w-5 flex justify-center`}>
             {option.icon}
           </div>
-          <span className="text-sm font-medium text-gray-400 group-hover:text-gray-200">{option.label}</span>
+          <span className={`text-sm font-medium ${selectedVariation === option.label ? 'text-teal-100' : 'text-gray-400 group-hover:text-gray-200'}`}>{option.label}</span>
         </div>
       ))}
     </div>
@@ -127,11 +141,11 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
 
 // --- Main Page Component ---
 
-const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimulationResult }) => {
   const [showNotification, setShowNotification] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationResult, setSimulationResult] = useState<any>(null);
   const [simulationId, setSimulationId] = useState<string>('User Group 1');
+  const [selectedVariation, setSelectedVariation] = useState<string>('');
 
   useEffect(() => {
     const fetchSimulations = async () => {
@@ -199,11 +213,25 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
         alert("Please enter some content first.");
         return;
     }
-    const result = await GradioService.generateVariants(msg);
-    if (Array.isArray(result)) {
-        alert("Crafted variants:\n\n" + result.join("\n\n"));
-    } else {
-        alert("Crafted suggestion: " + JSON.stringify(result));
+
+    setIsSimulating(true); // Reuse simulating state for loading
+    try {
+        // Here we could use an OpenAI compatible endpoint if available.
+        // For now we use the generateVariants from GradioService which acts as the LLM helper.
+        // We pass the selectedVariation to help the prompt.
+        const prompt = selectedVariation ? `[Mode: ${selectedVariation}] ${msg}` : msg;
+        const result = await GradioService.generateVariants(prompt);
+
+        if (Array.isArray(result)) {
+            alert(`Crafted variants for ${selectedVariation || 'general content'}:\n\n` + result.join("\n\n"));
+        } else {
+            alert("Crafted suggestion: " + JSON.stringify(result));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Failed to craft content.");
+    } finally {
+        setIsSimulating(false);
     }
   };
 
@@ -297,19 +325,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
              {/* Column 1 */}
              <div className="space-y-12">
-               <CategoryCard title="Survey" options={categories['Survey']} />
-               <CategoryCard title="Marketing Content" options={categories['Marketing Content']} />
+               <CategoryCard title="Survey" options={categories['Survey']} selectedVariation={selectedVariation} onSelect={setSelectedVariation} />
+               <CategoryCard title="Marketing Content" options={categories['Marketing Content']} selectedVariation={selectedVariation} onSelect={setSelectedVariation} />
              </div>
 
              {/* Column 2 */}
              <div className="space-y-12">
-               <CategoryCard title="Social Media Posts" options={categories['Social Media Posts']} />
+               <CategoryCard title="Social Media Posts" options={categories['Social Media Posts']} selectedVariation={selectedVariation} onSelect={setSelectedVariation} />
              </div>
 
              {/* Column 3 */}
              <div className="space-y-12">
-                <CategoryCard title="Communication" options={categories['Communication']} />
-                <CategoryCard title="Product" options={categories['Product']} />
+                <CategoryCard title="Communication" options={categories['Communication']} selectedVariation={selectedVariation} onSelect={setSelectedVariation} />
+                <CategoryCard title="Product" options={categories['Product']} selectedVariation={selectedVariation} onSelect={setSelectedVariation} />
              </div>
           </div>
 
