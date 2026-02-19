@@ -17,7 +17,7 @@ import ConversationPage from './components/ConversationPage';
 import ChatPage from './components/ChatPage';
 
 function App() {
-  const [currentView, setCurrentView] = useState<'landing' | 'simulation' | 'conversation' | 'chat'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'simulation' | 'conversation' | 'chat'>('simulation');
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -66,6 +66,8 @@ function App() {
         onBack={goBackToLanding} 
         onOpenConversation={openConversation}
         onOpenChat={openChat}
+        user={user}
+        onLogin={loginWithHF}
       />
     );
   }

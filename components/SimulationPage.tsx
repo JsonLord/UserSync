@@ -6,6 +6,8 @@ interface SimulationPageProps {
   onBack: () => void;
   onOpenConversation: () => void;
   onOpenChat: () => void;
+  user?: any;
+  onLogin?: () => void;
 }
 
 // Define the data structure for filters
@@ -38,7 +40,7 @@ const VIEW_FILTERS: Record<string, Array<{ label: string; color: string }>> = {
   ]
 };
 
-const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversation, onOpenChat }) => {
+const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversation, onOpenChat, user, onLogin }) => {
   const [society, setSociety] = useState('User Group 1');
   const [viewMode, setViewMode] = useState('Job Title');
   const [isBuilding, setIsBuilding] = useState(false);
@@ -173,10 +175,24 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
         {/* Footer */}
         <div className="border-t border-gray-800 p-4 space-y-1 bg-[#0a0a0a]">
-           <div className="flex justify-between items-center py-2 text-sm text-gray-400 border-b border-gray-800 mb-2 pb-4">
-              <span>Credits: 0</span>
-              <Info size={14} className="cursor-help" />
-           </div>
+           {user ? (
+             <div className="flex items-center gap-3 py-3 border-b border-gray-800 mb-2">
+                {user.avatarUrl && <img src={user.avatarUrl} alt={user.preferred_username} className="w-8 h-8 rounded-full border border-gray-700" />}
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-gray-200">{user.preferred_username}</span>
+                  <span className="text-[10px] text-gray-500">Credits: 0</span>
+                </div>
+             </div>
+           ) : (
+             <div className="py-2 border-b border-gray-800 mb-2">
+                <button
+                  onClick={onLogin}
+                  className="w-full py-2 bg-white text-black rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
+                >
+                  Sign in with Hugging Face
+                </button>
+             </div>
+           )}
 
            <MenuItem icon={<Plus size={16}/>} label="Start Free Trial" highlight />
            <MenuItem icon={<MessageSquare size={16}/>} label="Leave Feedback" />

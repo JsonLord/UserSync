@@ -23,25 +23,47 @@ export class GradioService {
     }
   }
 
-  static async simulate(persona: string, message: string) {
+  static async startSimulationAsync(simulationId: string, contentText: string, format: string = "text") {
     try {
       const client = await this.getClient();
-      const result = await client.predict("/simulate", [persona, message]);
+      const result = await client.predict("/start_simulation_async", [simulationId, contentText, format]);
       return result.data;
     } catch (error) {
-      console.error("Error in simulation:", error);
+      console.error("Error starting simulation:", error);
       throw error;
     }
   }
 
-  static async helpMeCraft(content: string) {
+  static async getSimulationStatus(simulationId: string) {
     try {
       const client = await this.getClient();
-      const result = await client.predict("/help_me_craft", [content]);
+      const result = await client.predict("/get_simulation_status", [simulationId]);
       return result.data;
     } catch (error) {
-      console.error("Error helping to craft content:", error);
-      return "Unable to craft content at this time.";
+      console.error("Error getting simulation status:", error);
+      throw error;
+    }
+  }
+
+  static async generateVariants(contentText: string, numVariants: number = 3) {
+    try {
+      const client = await this.getClient();
+      const result = await client.predict("/generate_variants", [contentText, numVariants]);
+      return result.data;
+    } catch (error) {
+      console.error("Error generating variants:", error);
+      return ["Unable to generate variants at this time."];
+    }
+  }
+
+  static async listSimulations() {
+    try {
+      const client = await this.getClient();
+      const result = await client.predict("/list_simulations", []);
+      return result.data;
+    } catch (error) {
+      console.error("Error listing simulations:", error);
+      return [];
     }
   }
 }

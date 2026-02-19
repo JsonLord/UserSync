@@ -1,6 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon, Loader2, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { GradioService } from '../services/gradioService';
 
 // --- Types ---
@@ -43,6 +43,7 @@ const CategoryCard: React.FC<{ title: string; options: { label: string; icon: Re
 
 const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (msg: string) => void; isSimulating: boolean }> = ({ onSimulate, onHelpMeCraft, isSimulating }) => {
   const [message, setMessage] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUploadClick = () => {
@@ -50,16 +51,34 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      console.log("Selected file:", file.name);
-      // In a real app, you'd handle the upload here
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const newFiles = Array.from(files);
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      console.log("Selected files:", newFiles.map(f => f.name));
     }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
     <div className="border-t border-gray-800 pt-6 mt-4 bg-[#0a0a0a] px-6 pb-8 md:pb-10 absolute bottom-0 left-0 right-0 z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
       <div className="max-w-5xl mx-auto space-y-4">
+        {uploadedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {uploadedFiles.map((file, idx) => (
+              <div key={idx} className="flex items-center gap-2 bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-full text-[10px] text-gray-300">
+                <Image size={10} />
+                <span className="truncate max-w-[100px]">{file.name}</span>
+                <button onClick={() => removeFile(idx)} className="text-gray-500 hover:text-white">
+                  <X size={10} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <textarea
           className="w-full h-24 bg-black border border-gray-800 text-gray-200 placeholder-gray-600 p-4 rounded-2xl resize-none focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition-all text-sm leading-relaxed"
           placeholder="Paste your brand narrative or campaign copy here"
@@ -77,10 +96,11 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
               onChange={handleFileChange}
               className="hidden"
               accept="image/*"
+              multiple
             />
             <ChatButton
-              label="Upload Images"
-              icon={<Image size={14} />}
+              label={uploadedFiles.length > 0 ? `${uploadedFiles.length} Images Selected` : "Upload Images"}
+              icon={uploadedFiles.length > 0 ? <CheckCircle2 size={14} className="text-green-500" /> : <Image size={14} />}
               className="h-fit"
               onClick={handleUploadClick}
             />
@@ -110,36 +130,81 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
 const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
   const [showNotification, setShowNotification] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
-  const [simulationResult, setSimulationResult] = useState<string | null>(null);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [simulationId, setSimulationId] = useState<string>('User Group 1');
 
-  const handleSimulate = (msg: string) => {
+  useEffect(() => {
+    const fetchSimulations = async () => {
+      try {
+        const sims = await GradioService.listSimulations();
+        if (sims && sims.length > 0) {
+          // If sims is an array of objects or strings, pick the first one
+          const firstSim = typeof sims[0] === 'string' ? sims[0] : (sims[0].id || sims[0].name || 'User Group 1');
+          setSimulationId(firstSim);
+        }
+      } catch (e) {
+        console.error("Failed to fetch simulations:", e);
+      }
+    };
+    fetchSimulations();
+  }, []);
+
+  const handleSimulate = async (msg: string) => {
+    if (!msg.trim()) {
+      alert("Please enter some content to simulate.");
+      return;
+    }
     setIsSimulating(true);
     setShowNotification(true);
+    setSimulationResult(null);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const result = await GradioService.startSimulationAsync(simulationId, msg);
       setIsSimulating(false);
-      setSimulationResult("Please wait, the results will show here. Click Refresh to gather results from the API.");
-    }, 2000);
+      setSimulationResult({
+        status: "Initiated",
+        message: "Simulation started successfully. Please wait for the results.",
+        data: result
+      });
+    } catch (error) {
+      setIsSimulating(false);
+      setSimulationResult({
+        status: "Error",
+        message: "Failed to start simulation. Please try again."
+      });
+    }
   };
 
   const handleRefresh = async () => {
     setIsSimulating(true);
     try {
-      // In a real scenario, we would poll the Gradio API for results
-      // result = await GradioService.simulate(...)
-      setTimeout(() => {
-        setIsSimulating(false);
-        setSimulationResult("Final Simulation Results: The content resonated well with 85% of the target audience. Key feedback: 'Clearer value proposition needed in the header'.");
-      }, 1500);
+      const status = await GradioService.getSimulationStatus(simulationId);
+      setIsSimulating(false);
+      setSimulationResult({
+        status: "Updated",
+        message: "Latest status gathered from API.",
+        data: status
+      });
     } catch (error) {
       setIsSimulating(false);
+      setSimulationResult({
+        status: "Error",
+        message: "Failed to gather results. The simulation might still be in progress."
+      });
     }
   };
 
   const handleHelpMeCraft = async (msg: string) => {
-    const crafted = await GradioService.helpMeCraft(msg);
-    alert("Help Me Craft suggestion: " + crafted);
+    if (!msg.trim()) {
+        alert("Please enter some content first.");
+        return;
+    }
+    const result = await GradioService.generateVariants(msg);
+    if (Array.isArray(result)) {
+        alert("Crafted variants:\n\n" + result.join("\n\n"));
+    } else {
+        alert("Crafted suggestion: " + JSON.stringify(result));
+    }
   };
 
   const categories = {
@@ -175,9 +240,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
             <div className="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-lg text-white font-bold">Λ</div>
             <h2 className="text-xl font-medium tracking-tight">New Simulation</h2>
          </div>
-         <button onClick={onBack} className="p-2 text-gray-500 hover:text-white hover:bg-gray-900 rounded-full transition-colors">
-            <X size={24} />
-         </button>
+         <div className="flex items-center gap-4">
+            {simulationId && <span className="text-[10px] text-gray-500 uppercase tracking-widest hidden md:block">Active Group: {simulationId}</span>}
+            <button onClick={onBack} className="p-2 text-gray-500 hover:text-white hover:bg-gray-900 rounded-full transition-colors">
+                <X size={24} />
+            </button>
+         </div>
       </div>
 
       {/* Notification Banner */}
@@ -188,13 +256,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
                 <AlertCircle size={18} className="text-green-400" />
               </div>
               <div className="flex-1">
-                <h4 className="font-semibold text-green-300 mb-1">Simulation Initiated</h4>
+                <h4 className="font-semibold text-green-300 mb-1">Simulation Status</h4>
                 <p className="text-sm text-green-200/70 leading-relaxed">
-                  The simulation has started. This process can take up to <strong className="text-white">30 minutes</strong>. The results will show here when ready.
+                  The simulation process can take up to <strong className="text-white">30 minutes</strong>. Click "Gather Results" to fetch the latest state.
                 </p>
                 {simulationResult && (
                   <div className="mt-4 p-3 bg-black/40 rounded-xl border border-green-500/20 text-xs text-green-200 flex flex-col gap-3">
-                    <p>{simulationResult}</p>
+                    <div className="font-medium flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${simulationResult.status === 'Error' ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></div>
+                        {simulationResult.message}
+                    </div>
+                    {simulationResult.data && (
+                        <pre className="text-[10px] bg-black/50 p-2 rounded max-h-32 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
+                            {JSON.stringify(simulationResult.data, null, 2)}
+                        </pre>
+                    )}
                     <button
                       onClick={handleRefresh}
                       disabled={isSimulating}
@@ -214,7 +290,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
       )}
 
       {/* Scrollable Content Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 pb-80"> {/* Large bottom padding for fixed input */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 pb-80">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-semibold text-center mb-12 mt-4 md:mt-8">What would you like to simulate?</h1>
           
