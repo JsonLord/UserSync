@@ -9,11 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
-    "react": "^19.2.0",
+    "@gradio/client": "^2.0.4",
+    "express": "^5.2.1",
     "lucide-react": "^0.555.0",
+    "plotly.js": "2.30.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-is": "^19.2.4",
     "recharts": "^3.5.0",
-    "plotly.js": "2.30.0"
+    "vite-plugin-node-polyfills": "^0.25.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

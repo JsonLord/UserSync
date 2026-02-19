@@ -38,22 +38,11 @@ const VIEW_FILTERS: Record<string, Array<{ label: string; color: string }>> = {
   ]
 };
 
-const OutageNotification = () => (
-  <div className="bg-red-900/80 border border-red-700/50 rounded-xl p-4 mt-4 cursor-default animate-pulse">
-     <div className="flex items-center gap-2 text-white font-bold text-sm mb-1">
-        <AlertTriangle size={16} className="text-red-400"/>
-        <span>Service Alert</span>
-     </div>
-     <p className="text-red-200 text-xs leading-relaxed">
-       LinkedIn data provider is experiencing an outage. Only X (Twitter) is available for now.
-     </p>
-  </div>
-);
-
 const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversation, onOpenChat }) => {
-  const [society, setSociety] = useState('NYT Readers');
-  const [viewMode, setViewMode] = useState('Country');
+  const [society, setSociety] = useState('User Group 1');
+  const [viewMode, setViewMode] = useState('Job Title');
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(true);
 
   // Function to simulate rebuilding the graph when settings change
   const handleSettingChange = (setter: (val: string) => void, value: string) => {
@@ -94,10 +83,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
                   onChange={(e) => handleSettingChange(setSociety, e.target.value)}
                   className="w-full appearance-none bg-[#111] border border-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option>NYT Readers</option>
-                  <option>Tech Founders EU</option>
-                  <option>Gen Z Gamers</option>
-                  <option>SaaS Investors</option>
+                  <option>User Group 1</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
               </div>
@@ -141,8 +127,16 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
               <span className="font-medium text-sm">Open Global Chat</span>
            </button>
 
-           {/* Outage Notification */}
-           <OutageNotification />
+           {/* Setup Warning */}
+           <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-4 mt-4">
+              <div className="flex items-center gap-2 text-amber-200 font-bold text-xs mb-1">
+                 <AlertTriangle size={14}/>
+                 <span>Action Required</span>
+              </div>
+              <p className="text-amber-200/70 text-[10px] leading-relaxed">
+                Assemble a new group and create a new test before using the chat features.
+              </p>
+           </div>
 
            {/* History List */}
            <div className="space-y-1 pt-4">
@@ -176,7 +170,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative bg-black">
+      <main className="flex-1 flex flex-col relative bg-black overflow-hidden">
          {/* Top Navigation Overlay */}
          <div className="absolute top-6 left-6 right-6 z-10 flex justify-center pointer-events-none">
              {/* Legend / Filter Chips */}
@@ -203,6 +197,22 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
             </button>
          </div>
       </main>
+
+      {/* Right Sidebar (Output) */}
+      <aside className={`w-[300px] flex-shrink-0 border-l border-gray-800 flex flex-col bg-[#0a0a0a] z-20 transition-all duration-300 ${isRightPanelOpen ? 'mr-0' : '-mr-[300px]'}`}>
+        <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
+           <span className="font-semibold tracking-tight uppercase text-xs text-gray-500">Output</span>
+           <button onClick={() => setIsRightPanelOpen(false)} className="text-gray-500 hover:text-white"><PanelLeftClose size={18} className="rotate-180"/></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+              <p className="text-xs text-gray-500 mb-2">Simulation Results</p>
+              <div className="text-sm text-gray-400 italic text-center py-8">
+                Results will appear here after running a simulation.
+              </div>
+           </div>
+        </div>
+      </aside>
     </div>
   );
 };

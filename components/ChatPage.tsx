@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon, Loader2, RefreshCw } from 'lucide-react';
+import { GradioService } from '../services/gradioService';
 
 // --- Types ---
 interface ChatPageProps {
@@ -40,8 +41,21 @@ const CategoryCard: React.FC<{ title: string; options: { label: string; icon: Re
   </div>
 );
 
-const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
+const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (msg: string) => void; isSimulating: boolean }> = ({ onSimulate, onHelpMeCraft, isSimulating }) => {
   const [message, setMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log("Selected file:", file.name);
+      // In a real app, you'd handle the upload here
+    }
+  };
 
   return (
     <div className="border-t border-gray-800 pt-6 mt-4 bg-[#0a0a0a] px-6 pb-8 md:pb-10 absolute bottom-0 left-0 right-0 z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.8)]">
@@ -57,13 +71,33 @@ const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
             <div className="flex flex-col gap-2">
                 <ChatButton label="Website Link for UX Testing" icon={<LinkIcon size={14} />} />
             </div>
-            <ChatButton label="Upload Images" icon={<Image size={14} />} className="h-fit" />
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              className="hidden"
+              accept="image/*"
+            />
+            <ChatButton
+              label="Upload Images"
+              icon={<Image size={14} />}
+              className="h-fit"
+              onClick={handleUploadClick}
+            />
           </div>
           <div className="flex gap-3 items-center mt-auto">
-             <button className="hidden md:flex text-xs text-gray-500 hover:text-white transition-colors items-center gap-1 mr-2">
+             <button
+               onClick={() => onHelpMeCraft(message)}
+               className="hidden md:flex text-xs text-gray-500 hover:text-white transition-colors items-center gap-1 mr-2"
+             >
                 Help Me Craft <Sparkles size={12} />
              </button>
-            <ChatButton label="Simulate" primary onClick={onSimulate} />
+            <ChatButton
+              label={isSimulating ? "Simulating..." : "Simulate"}
+              primary
+              onClick={() => onSimulate(message)}
+              icon={isSimulating ? <Loader2 size={14} className="animate-spin" /> : undefined}
+            />
           </div>
         </div>
       </div>
@@ -75,11 +109,37 @@ const ChatInput: React.FC<{ onSimulate: () => void }> = ({ onSimulate }) => {
 
 const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
   const [showNotification, setShowNotification] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<string | null>(null);
 
-  const handleSimulate = () => {
+  const handleSimulate = (msg: string) => {
+    setIsSimulating(true);
     setShowNotification(true);
-    // Auto-hide after 10 seconds, but arguably for this UX it should persist until user acknowledges
-    setTimeout(() => setShowNotification(false), 10000); 
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsSimulating(false);
+      setSimulationResult("Please wait, the results will show here. Click Refresh to gather results from the API.");
+    }, 2000);
+  };
+
+  const handleRefresh = async () => {
+    setIsSimulating(true);
+    try {
+      // In a real scenario, we would poll the Gradio API for results
+      // result = await GradioService.simulate(...)
+      setTimeout(() => {
+        setIsSimulating(false);
+        setSimulationResult("Final Simulation Results: The content resonated well with 85% of the target audience. Key feedback: 'Clearer value proposition needed in the header'.");
+      }, 1500);
+    } catch (error) {
+      setIsSimulating(false);
+    }
+  };
+
+  const handleHelpMeCraft = async (msg: string) => {
+    const crafted = await GradioService.helpMeCraft(msg);
+    alert("Help Me Craft suggestion: " + crafted);
   };
 
   const categories = {
@@ -127,11 +187,24 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
               <div className="p-1.5 bg-green-500/20 rounded-full mt-0.5 shrink-0">
                 <AlertCircle size={18} className="text-green-400" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-semibold text-green-300 mb-1">Simulation Initiated</h4>
                 <p className="text-sm text-green-200/70 leading-relaxed">
-                  The simulation has started. This process can take up to <strong className="text-white">30 minutes</strong>. The results will be sent to this chat automatically when ready.
+                  The simulation has started. This process can take up to <strong className="text-white">30 minutes</strong>. The results will show here when ready.
                 </p>
+                {simulationResult && (
+                  <div className="mt-4 p-3 bg-black/40 rounded-xl border border-green-500/20 text-xs text-green-200 flex flex-col gap-3">
+                    <p>{simulationResult}</p>
+                    <button
+                      onClick={handleRefresh}
+                      disabled={isSimulating}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 rounded-lg self-end transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw size={14} className={isSimulating ? "animate-spin" : ""} />
+                      Gather Results
+                    </button>
+                  </div>
+                )}
               </div>
               <button onClick={() => setShowNotification(false)} className="text-green-400 hover:text-white ml-auto p-1">
                 <X size={16} />
@@ -174,7 +247,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack }) => {
       </div>
 
       {/* Input Footer */}
-      <ChatInput onSimulate={handleSimulate} />
+      <ChatInput onSimulate={handleSimulate} onHelpMeCraft={handleHelpMeCraft} isSimulating={isSimulating} />
     </div>
   );
 };
