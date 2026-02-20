@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { X, ClipboardList, Linkedin, Instagram, Mail, Layout, Edit3, MonitorPlay, Lightbulb, Image, Plus, Sparkles, Zap, AlertCircle, Video, Megaphone, Link as LinkIcon, Loader2, RefreshCw, CheckCircle2, MessageSquare } from 'lucide-react';
 import { GradioService } from '../services/gradioService';
 
 // --- Types ---
@@ -126,12 +126,19 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
              >
                 Help Me Craft <Sparkles size={12} />
              </button>
-            <ChatButton
-              label={isSimulating ? "Simulating..." : "Simulate"}
-              primary
-              onClick={() => onSimulate(message)}
-              icon={isSimulating ? <Loader2 size={14} className="animate-spin" /> : undefined}
-            />
+            <div className="flex gap-2">
+              <ChatButton
+                label="Send"
+                onClick={() => onSimulate(message)}
+                icon={<MessageSquare size={14} />}
+              />
+              <ChatButton
+                label={isSimulating ? "Please wait..." : "Simulate"}
+                primary
+                onClick={() => onSimulate(message)}
+                icon={isSimulating ? <Loader2 size={14} className="animate-spin" /> : undefined}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -151,10 +158,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
     const fetchSimulations = async () => {
       try {
         const sims = await GradioService.listSimulations();
-        if (sims && sims.length > 0) {
-          // If sims is an array of objects or strings, pick the first one
-          const firstSim = typeof sims[0] === 'string' ? sims[0] : (sims[0].id || sims[0].name || 'User Group 1');
-          setSimulationId(firstSim);
+        if (Array.isArray(sims) && sims.length > 0) {
+          const firstSim = typeof sims[0] === 'string' ? sims[0] : (sims[0].id || sims[0].name || '');
+          if (firstSim) {
+            setSimulationId(firstSim);
+          }
         }
       } catch (e) {
         console.error("Failed to fetch simulations:", e);
@@ -214,22 +222,27 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
         return;
     }
 
-    setIsSimulating(true); // Reuse simulating state for loading
+    setIsSimulating(true);
     try {
-        // Here we could use an OpenAI compatible endpoint if available.
-        // For now we use the generateVariants from GradioService which acts as the LLM helper.
-        // We pass the selectedVariation to help the prompt.
-        const prompt = selectedVariation ? `[Mode: ${selectedVariation}] ${msg}` : msg;
-        const result = await GradioService.generateVariants(prompt);
+        const response = await fetch('/api/craft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: msg,
+                variation: selectedVariation
+            })
+        });
 
-        if (Array.isArray(result)) {
-            alert(`Crafted variants for ${selectedVariation || 'general content'}:\n\n` + result.join("\n\n"));
-        } else {
-            alert("Crafted suggestion: " + JSON.stringify(result));
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to craft content');
         }
-    } catch (e) {
+
+        alert(`Crafted variants for ${selectedVariation || 'general content'}:\n\n` + data.result);
+    } catch (e: any) {
         console.error(e);
-        alert("Failed to craft content.");
+        alert("Failed to craft content: " + e.message);
     } finally {
         setIsSimulating(false);
     }
@@ -269,7 +282,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
             <h2 className="text-xl font-medium tracking-tight">New Simulation</h2>
          </div>
          <div className="flex items-center gap-4">
-            {simulationId && <span className="text-[10px] text-gray-500 uppercase tracking-widest hidden md:block">Active Group: {simulationId}</span>}
             <button onClick={onBack} className="p-2 text-gray-500 hover:text-white hover:bg-gray-900 rounded-full transition-colors">
                 <X size={24} />
             </button>
@@ -286,12 +298,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
               <div className="flex-1">
                 <h4 className="font-semibold text-green-300 mb-1">Simulation Status</h4>
                 <p className="text-sm text-green-200/70 leading-relaxed">
-                  The simulation process can take up to <strong className="text-white">30 minutes</strong>. Click "Gather Results" to fetch the latest state.
+                  Please wait, the results will show here. The simulation process can take up to <strong className="text-white">30 minutes</strong>. Click "Gather Results" to fetch the latest state.
                 </p>
                 {simulationResult && (
                   <div className="mt-4 p-3 bg-black/40 rounded-xl border border-green-500/20 text-xs text-green-200 flex flex-col gap-3">
                     <div className="font-medium flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${simulationResult.status === 'Error' ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full ${simulationResult.status === 'Error' ? 'bg-red-500' : 'bg-green-500'}`}></div>
                         {simulationResult.message}
                     </div>
                     {simulationResult.data && (

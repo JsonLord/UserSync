@@ -1,5 +1,5 @@
 ---
-title: UserSyncInterface
+title: Branding Content Testing
 emoji: 🔄
 colorFrom: blue
 colorTo: blue

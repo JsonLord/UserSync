@@ -46,8 +46,8 @@ const VIEW_FILTERS: Record<string, Array<{ label: string; color: string }>> = {
 const SimulationPage: React.FC<SimulationPageProps> = ({
   onBack, onOpenConversation, onOpenChat, user, onLogin, simulationResult, setSimulationResult
 }) => {
-  const [society, setSociety] = useState('User Group 1');
-  const [societies, setSocieties] = useState<string[]>(['User Group 1']);
+  const [society, setSociety] = useState('');
+  const [societies, setSocieties] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState('Job Title');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
@@ -67,11 +67,21 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
     // Fetch real focus groups
     const fetchSocieties = async () => {
         try {
-            const list = await GradioService.listSimulations();
-            if (list && list.length > 0) {
-                const names = list.map((s: any) => typeof s === 'string' ? s : (s.id || s.name));
+            const result = await GradioService.listSimulations();
+            // Handle both direct array and Gradio data wrap
+            const list = Array.isArray(result) ? result : (result?.data?.[0] || []);
+
+            if (Array.isArray(list)) {
+                const names = list
+                    .map((s: any) => {
+                        if (typeof s === 'string') return s;
+                        if (typeof s === 'object' && s !== null) return s.id || s.name || '';
+                        return '';
+                    })
+                    .filter(name => name.length > 0 && !name.toLowerCase().includes('default') && !name.toLowerCase().includes('template'));
+
                 setSocieties(names);
-                if (!names.includes(society)) {
+                if (names.length > 0 && (!society || !names.includes(society))) {
                     setSociety(names[0]);
                 }
             }
@@ -155,6 +165,14 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
            <div className="h-px bg-gray-800 my-4" />
 
            {/* Actions */}
+           <button
+             onClick={onOpenConversation}
+             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2 border-b border-gray-800/50 mb-1"
+           >
+              <span>Assemble new group</span>
+              <Plus size={18} className="text-gray-500 group-hover:text-white" />
+           </button>
+
            <button 
              onClick={onOpenConversation}
              className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
@@ -172,14 +190,14 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
               <span className="font-medium text-sm">Open Global Chat</span>
            </button>
 
-           {/* Setup Warning */}
-           <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-4 mt-4">
-              <div className="flex items-center gap-2 text-amber-200 font-bold text-xs mb-1">
-                 <AlertTriangle size={14}/>
-                 <span>Action Required</span>
+           {/* Setup Warning / Info Box */}
+           <div className="bg-blue-900/30 border border-blue-700/50 rounded-xl p-4 mt-4">
+              <div className="flex items-center gap-2 text-blue-200 font-bold text-xs mb-1">
+                 <Info size={14}/>
+                 <span>Configuration Required</span>
               </div>
-              <p className="text-amber-200/70 text-[10px] leading-relaxed">
-                Assemble a new group and create a new test before using the chat features.
+              <p className="text-blue-200/70 text-[10px] leading-relaxed">
+                Assemble new group and create a new test are required to be configured first before using any chat.
               </p>
            </div>
 
@@ -317,7 +335,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs font-medium text-green-400">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                     {simulationResult.status}
                   </div>
                   <p className="text-[11px] text-gray-400">{simulationResult.message}</p>
