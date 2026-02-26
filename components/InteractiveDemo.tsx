@@ -183,8 +183,8 @@ const Step2 = () => {
   return (
     <SectionLayout
       number="2"
-      title="Validate Campaign Narratives"
-      description="Execute simulations in minutes to find the optimal resonance of your brand message."
+      title="Run Rapid Experiments"
+      description="Execute simulations in minutes to find the optimal form of your content or idea."
       visual={
         <>
           <NetworkBackground />
@@ -205,14 +205,14 @@ const Step2 = () => {
                 </div>
                 <div className="bg-gray-900 rounded-lg p-4 mb-4 border border-gray-800">
                   <p className="text-gray-300 text-sm">
-                      Our new brand identity focuses on radical transparency and community-driven growth...
+                      We just secured $5.3M to build AI-native tools...
                   </p>
                 </div>
                 <Button 
                    className="w-full flex items-center justify-center gap-2"
                    onClick={handleSimulate}
                 >
-                   Simulate Campaign <Send size={16} />
+                   Simulate Post <Send size={16} />
                 </Button>
              </div>
 
@@ -239,8 +239,8 @@ const Step3 = () => {
   return (
     <SectionLayout
       number="3"
-      title="Measure Brand Resonance"
-      description="Evaluate how your brand values land with specific demographics through detailed sentiment scores."
+      title="Get Instant Insights"
+      description="Evaluate the performance of your experiment with scores, comments, and summaries."
       visual={
         <>
         <NetworkBackground />
@@ -249,29 +249,29 @@ const Step3 = () => {
            <div className="bg-black border border-gray-800 rounded-xl p-6 shadow-2xl hover:border-gray-600 transition-colors cursor-default group">
               <div className="flex justify-between items-start mb-6">
                   <div>
-                    <span className="text-xs text-gray-400 uppercase tracking-wider">Brand Alignment</span>
-                    <div className="text-3xl font-bold text-white mt-1">94<span className="text-base font-normal text-gray-500">/100</span></div>
+                    <span className="text-xs text-gray-400 uppercase tracking-wider">Impact Score</span>
+                    <div className="text-3xl font-bold text-white mt-1">88<span className="text-base font-normal text-gray-500">/100</span></div>
                   </div>
-                  <div className="bg-green-500/10 text-green-400 text-xs px-2 py-1 rounded border border-green-500/20">Highly Coherent</div>
+                  <div className="bg-green-500/10 text-green-400 text-xs px-2 py-1 rounded border border-green-500/20">Exceptional</div>
               </div>
               
               <div className="space-y-4">
                  <div>
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
-                       <span>Trustworthiness</span>
-                       <span>88%</span>
+                       <span>Attention</span>
+                       <span>80%</span>
                     </div>
                     <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-green-500 w-[88%] rounded-full group-hover:bg-green-400 transition-colors"></div>
+                       <div className="h-full bg-green-500 w-[80%] rounded-full group-hover:bg-green-400 transition-colors"></div>
                     </div>
                  </div>
                  <div>
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
-                       <span>Brand Recall</span>
-                       <span>82%</span>
+                       <span>Relevance</span>
+                       <span>92%</span>
                     </div>
                     <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-teal-500 w-[82%] rounded-full group-hover:bg-teal-400 transition-colors"></div>
+                       <div className="h-full bg-teal-500 w-[92%] rounded-full group-hover:bg-teal-400 transition-colors"></div>
                     </div>
                  </div>
               </div>
@@ -281,10 +281,10 @@ const Step3 = () => {
            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-5 backdrop-blur-sm animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <div className="flex items-center gap-2 mb-3">
                  <MessageSquare size={14} className="text-purple-400" />
-                 <span className="text-xs font-medium text-purple-200">Brand Insight</span>
+                 <span className="text-xs font-medium text-purple-200">Key Insight</span>
               </div>
               <p className="text-sm text-gray-300 leading-relaxed italic">
-                 "The 'transparency' angle increased trust scores by 25% among Millennial tech professionals."
+                 "Founders in the EU region responded strongly to the 'no-code' angle, seeing it as a major time-saver."
               </p>
            </div>
         </div>
@@ -300,9 +300,9 @@ const Step4 = () => {
   const [activeVariant, setActiveVariant] = useState(0);
 
   const variants = [
-    { label: "Original", score: 52, text: "We're launching a new sustainable clothing line next month." },
-    { label: "Variant 1", score: 91, text: "Radical transparency in every stitch. Meet the brand that's redefining sustainable luxury." },
-    { label: "Variant 2", score: 78, text: "Style without compromise. Our eco-friendly collection arrives soon." },
+    { label: "Original", score: 48, text: "We just secured $5.3M to build AI-native tools..." },
+    { label: "Variant 1", score: 88, text: "Stop writing code before you have product-market fit. We just raised $5.3M to help you simulate it first." },
+    { label: "Variant 2", score: 83, text: "Big news: $5.3M raised! We're building the future of founder tools in Europe." },
   ];
 
   return (

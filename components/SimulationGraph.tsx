@@ -22,8 +22,7 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
     if (!graphDiv.current || isBuilding) return;
 
     // --- Dynamic Data Generation based on Society Type ---
-    const safeSocietyType = typeof societyType === 'string' ? societyType : '';
-    const isTech = safeSocietyType.includes('Tech') || safeSocietyType.includes('Founders');
+    const isTech = societyType.includes('Tech') || societyType.includes('Founders');
     
     const N = isTech ? 120 : 80; 
     const radius = isTech ? 0.18 : 0.22; 

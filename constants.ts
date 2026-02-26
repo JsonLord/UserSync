@@ -11,20 +11,20 @@ export const NAV_LINKS: NavLink[] = [
 export const USE_CASES: UseCase[] = [
   {
     category: UseCaseCategory.PR_COMMS,
-    title: "Brand Narratives",
-    description: "Test different brand communication strategies via API to deliver the right emotional impact",
+    title: "Craft Narratives",
+    description: "Test different communication strategies via API to deliver the right reaction",
     color: "bg-purple-500"
   },
   {
     category: UseCaseCategory.PRODUCT,
-    title: "Market Positioning",
-    description: "Test how your target customers perceive your brand positioning and values",
+    title: "Decide Features",
+    description: "Test how your target customers react to product ideas and new features",
     color: "bg-teal-500"
   },
   {
     category: UseCaseCategory.BRANDING,
-    title: "Visual Identity",
-    description: "Test how different visual brand assets and voice ideas resonate with your ideal buyer.",
+    title: "Stand Out",
+    description: "Test how different brand and voice ideas resonate with your ideal buyer.",
     color: "bg-pink-500"
   },
   {
