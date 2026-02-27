@@ -66,4 +66,37 @@ export class GradioService {
       return [];
     }
   }
+
+  static async generatePersonas(businessDescription: string, customerProfile: string, numPersonas: number = 1) {
+    try {
+      const client = await this.getClient();
+      const result = await client.predict("/generate_personas", [businessDescription, customerProfile, numPersonas, null]);
+      return result.data[0];
+    } catch (error) {
+      console.error("Error generating personas:", error);
+      throw error;
+    }
+  }
+
+  static async generateSocialNetwork(name: string, personaCount: number = 10, networkType: string = "scale_free", focusGroupName: string | null = null) {
+    try {
+      const client = await this.getClient();
+      const result = await client.predict("/generate_social_network", [name, personaCount, networkType, focusGroupName]);
+      return result.data[0];
+    } catch (error) {
+      console.error("Error generating social network:", error);
+      throw error;
+    }
+  }
+
+  static async getNetworkGraph(simulationId: string) {
+    try {
+      const client = await this.getClient();
+      const result = await client.predict("/get_network_graph", [simulationId]);
+      return result.data[0];
+    } catch (error) {
+      console.error("Error getting network graph:", error);
+      throw error;
+    }
+  }
 }

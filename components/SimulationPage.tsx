@@ -318,7 +318,12 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
 
          {/* Graph Container */}
          <div className="flex-1 w-full h-full">
-            <SimulationGraph isBuilding={isBuilding} societyType={society} onStartChat={onOpenChat} />
+            <SimulationGraph
+              isBuilding={isBuilding}
+              societyType={society}
+              viewMode={viewMode}
+              onStartChat={onOpenChat}
+            />
          </div>
 
          {/* Modals */}
@@ -439,7 +444,43 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                  </button>
                  <button
                    onClick={async () => {
-                     // Save to backend logic
+                     if (activeModal === 'assemble') {
+                       setIsBuilding(true);
+                       try {
+                         // 1. Generate personas based on profile and company info
+                         const personas = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, 5);
+
+                         // 2. Generate social network for these personas
+                         const groupName = formData.customerProfile.substring(0, 20);
+                         await GradioService.generateSocialNetwork(groupName, 10, 'scale_free', groupName);
+
+                         // 3. Save to backend
+                         await fetch('/api/save-data', {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({
+                             type: 'assemble',
+                             data: { ...formData, generatedPersonas: personas },
+                             user: user?.preferred_username || 'anonymous'
+                           })
+                         });
+
+                         // 4. Update UI
+                         setSocieties(prev => [groupName, ...prev]);
+                         setSociety(groupName);
+                         setActiveModal('none');
+                         alert('Focus group assembled and selected!');
+                       } catch (e) {
+                         console.error(e);
+                         alert('Failed to assemble group via API. Falling back to local save.');
+                         setActiveModal('none');
+                       } finally {
+                         setIsBuilding(false);
+                       }
+                       return;
+                     }
+
+                     // Save to backend logic for other modals
                      try {
                         const response = await fetch('/api/save-data', {
                           method: 'POST',
