@@ -8,7 +8,7 @@ const UseCases: React.FC = () => {
         <div className="flex justify-center mb-8">
            <span className="px-4 py-1.5 rounded-full border border-gray-700 text-sm text-gray-300">Use Cases</span>
         </div>
-        <h2 className="text-3xl md:text-5xl font-semibold text-center mb-20">Optimize any kind of message</h2>
+        <h2 className="text-3xl md:text-5xl font-semibold text-center mb-20">Solve high-stakes branding challenges</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {USE_CASES.map((useCase, idx) => (

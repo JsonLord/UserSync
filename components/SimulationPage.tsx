@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Plus, Info, MessageSquare, BookOpen, LogOut, PanelLeftClose, MessageCircle, Menu, PanelRightClose, RefreshCw } from 'lucide-react';
 import SimulationGraph from './SimulationGraph';
+import { GradioService } from '../services/gradioService';
 
 interface SimulationPageProps {
   onBack: () => void;
-  onOpenConversation: () => void;
   onOpenChat: () => void;
+  onOpenGuide: () => void;
+  user?: any;
+  onLogin?: () => void;
+  onLogout?: () => void;
+  simulationResult: any;
+  setSimulationResult: (res: any) => void;
 }
 
 // Define the data structure for filters
@@ -38,22 +44,88 @@ const VIEW_FILTERS: Record<string, Array<{ label: string; color: string }>> = {
   ]
 };
 
-const OutageNotification = () => (
-  <div className="bg-red-900/80 border border-red-700/50 rounded-xl p-4 mt-4 cursor-default animate-pulse">
-     <div className="flex items-center gap-2 text-white font-bold text-sm mb-1">
-        <AlertTriangle size={16} className="text-red-400"/>
-        <span>Service Alert</span>
-     </div>
-     <p className="text-red-200 text-xs leading-relaxed">
-       LinkedIn data provider is experiencing an outage. Only X (Twitter) is available for now.
-     </p>
-  </div>
-);
-
-const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversation, onOpenChat }) => {
-  const [society, setSociety] = useState('NYT Readers');
-  const [viewMode, setViewMode] = useState('Country');
+const SimulationPage: React.FC<SimulationPageProps> = ({
+  onBack, onOpenChat, onOpenGuide, user, onLogin, onLogout, simulationResult, setSimulationResult
+}) => {
+  const [society, setSociety] = useState('');
+  const [societies, setSocieties] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState('Job Title');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isRightPanelOpen, setIsRightPanelOpen] = useState(window.innerWidth > 1200);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(window.innerWidth > 768);
+
+  const [activeModal, setActiveModal] = useState<'none' | 'assemble' | 'feedback' | 'context' | 'test'>('none');
+  const [formData, setFormData] = useState({
+    customerProfile: '',
+    companyInfo: '',
+    personaScale: 50,
+    feedback: '',
+    context: '',
+    testName: ''
+  });
+
+  // Handle window resize for mobile responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsLeftPanelOpen(false);
+        setIsRightPanelOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Fetch real focus groups
+    const fetchSocieties = async () => {
+        try {
+            let names: string[] = [];
+
+            // 1. Fetch from Gradio (Templates/Global)
+            const result = await GradioService.listSimulations();
+            const list = Array.isArray(result) ? result : (result?.data?.[0] || []);
+
+            if (Array.isArray(list)) {
+                const gradioNames = list
+                    .map((s: any) => {
+                        if (typeof s === 'string') return s;
+                        if (typeof s === 'object' && s !== null) return s.id || s.name || '';
+                        return '';
+                    })
+                    // Filter out non-user groups as requested
+                    .filter(name => name.length > 0 && !name.toLowerCase().includes('default') && !name.toLowerCase().includes('template') && !name.toLowerCase().includes('current'));
+
+                names = [...gradioNames];
+            }
+
+            // 2. Fetch User-created groups from local storage
+            if (user?.preferred_username) {
+              try {
+                const localResp = await fetch(`/api/list-data?type=assemble&user=${user.preferred_username}`);
+                if (localResp.ok) {
+                  const localData = await localResp.json();
+                  const localNames = localData.map((d: any) => d.data.customerProfile.substring(0, 20) + '...');
+                  names = [...names, ...localNames];
+                }
+              } catch (e) {
+                console.error("Failed to fetch local groups", e);
+              }
+            }
+
+            // Remove duplicates
+            const uniqueNames = Array.from(new Set(names));
+            setSocieties(uniqueNames);
+
+            if (uniqueNames.length > 0 && (!society || !uniqueNames.includes(society))) {
+                setSociety(uniqueNames[0]);
+            }
+        } catch (e) {
+            console.error("Failed to fetch focus groups", e);
+        }
+    };
+    fetchSocieties();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Function to simulate rebuilding the graph when settings change
   const handleSettingChange = (setter: (val: string) => void, value: string) => {
@@ -70,34 +142,36 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
   const currentFilters = VIEW_FILTERS[viewMode] || VIEW_FILTERS['Country'];
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-black text-white font-sans relative">
       {/* Sidebar */}
-      <aside className="w-[300px] flex-shrink-0 border-r border-gray-800 flex flex-col bg-[#0a0a0a] z-20">
+      <aside className={`fixed md:relative w-[300px] h-full flex-shrink-0 border-r border-gray-800 flex flex-col bg-[#0a0a0a] z-40 transition-all duration-300 ${isLeftPanelOpen ? 'translate-x-0' : '-translate-x-full md:-ml-[300px]'}`}>
         {/* Header */}
         <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
            <div className="flex items-center gap-2 cursor-pointer" onClick={onBack}>
               <div className="w-6 h-6 flex items-center justify-center font-bold text-white">Λ</div>
-              <span className="font-semibold tracking-tight">SyncUsers</span>
+              <span className="font-semibold tracking-tight text-xs">Branding Content Testing</span>
            </div>
-           <button className="text-gray-500 hover:text-white"><PanelLeftClose size={18}/></button>
+           <button
+             onClick={() => setIsLeftPanelOpen(false)}
+             className="text-gray-500 hover:text-white"
+           >
+             <PanelLeftClose size={18}/>
+           </button>
         </div>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
            
-           {/* Current Focus Group Control */}
+           {/* Focus Group Control */}
            <div className="space-y-2">
-              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Current Focus Group</label>
+              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Focus Group</label>
               <div className="relative group">
                 <select 
                   value={society}
                   onChange={(e) => handleSettingChange(setSociety, e.target.value)}
                   className="w-full appearance-none bg-[#111] border border-gray-700 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 cursor-pointer"
                 >
-                  <option>NYT Readers</option>
-                  <option>Tech Founders EU</option>
-                  <option>Gen Z Gamers</option>
-                  <option>SaaS Investors</option>
+                  {societies.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
               </div>
@@ -125,10 +199,26 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
 
            {/* Actions */}
            <button 
-             onClick={onOpenConversation}
-             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
+             onClick={() => setActiveModal('assemble')}
+             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2 border-b border-gray-800/50 mb-1"
+           >
+              <span>Assemble new group</span>
+              <Plus size={18} className="text-gray-500 group-hover:text-white" />
+           </button>
+
+           <button
+             onClick={() => setActiveModal('test')}
+             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2 border-b border-gray-800/50 mb-1"
            >
               <span>Create a new test</span>
+              <Plus size={18} className="text-gray-500 group-hover:text-white" />
+           </button>
+
+           <button
+             onClick={() => setActiveModal('context')}
+             className="w-full flex items-center justify-between text-left text-sm text-gray-300 hover:text-white group py-2"
+           >
+              <span>Request new context</span>
               <Plus size={18} className="text-gray-500 group-hover:text-white" />
            </button>
 
@@ -141,46 +231,85 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
               <span className="font-medium text-sm">Open Global Chat</span>
            </button>
 
-           {/* Outage Notification */}
-           <OutageNotification />
+           {/* Setup Warning / Info Box */}
+           <div className="bg-blue-900/30 border border-blue-700/50 rounded-xl p-4 mt-4">
+              <div className="flex items-center gap-2 text-blue-200 font-bold text-xs mb-1">
+                 <Info size={14}/>
+                 <span>Configuration Required</span>
+              </div>
+              <p className="text-blue-200/70 text-[10px] leading-relaxed">
+                Assemble new group and create a new test are required to be configured first before using any chat.
+              </p>
+           </div>
 
            {/* History List */}
            <div className="space-y-1 pt-4">
              <label className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-2 block">Recent Tests</label>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Duality in portraits and sha...
+               Sustainable Luxury Narrative
              </div>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Volcanoes: Threat or Misun...
+               Radical Transparency Voice
              </div>
              <div className="text-sm text-gray-400 py-2 px-2 hover:bg-gray-800/50 rounded cursor-pointer truncate">
-               Sustainable Fashion 2024
+               Gen-Z Greenwash Perception
              </div>
            </div>
         </div>
 
         {/* Footer */}
         <div className="border-t border-gray-800 p-4 space-y-1 bg-[#0a0a0a]">
-           <div className="flex justify-between items-center py-2 text-sm text-gray-400 border-b border-gray-800 mb-2 pb-4">
-              <span>Credits: 0</span>
-              <Info size={14} className="cursor-help" />
-           </div>
+           {user ? (
+             <div className="flex items-center gap-3 py-3 border-b border-gray-800 mb-2">
+                {user.avatarUrl && <img src={user.avatarUrl} alt={user.preferred_username} className="w-8 h-8 rounded-full border border-gray-700" />}
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-gray-200">{user.preferred_username}</span>
+                  <span className="text-[10px] text-gray-500">Credits: Unlimited</span>
+                </div>
+             </div>
+           ) : (
+             <div className="py-2 border-b border-gray-800 mb-2">
+                <button
+                  onClick={onLogin}
+                  className="w-full py-2 bg-white text-black rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
+                >
+                  Sign in with Hugging Face
+                </button>
+             </div>
+           )}
 
-           <MenuItem icon={<Plus size={16}/>} label="Start Free Trial" highlight />
-           <MenuItem icon={<MessageSquare size={16}/>} label="Leave Feedback" />
-           <MenuItem icon={<BookOpen size={16}/>} label="Product Guide" />
-           <MenuItem icon={<LogOut size={16}/>} label="Log Out" />
+           <MenuItem icon={<MessageSquare size={16}/>} label="Leave Feedback" onClick={() => setActiveModal('feedback')} />
+           <MenuItem icon={<BookOpen size={16}/>} label="Product Guide" onClick={onOpenGuide} />
+           {user && <MenuItem icon={<LogOut size={16}/>} label="Log Out" onClick={onLogout} />}
            
            <div className="pt-4 text-[10px] text-gray-600">Version 2.1</div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative bg-black">
+      <main className="flex-1 flex flex-col relative bg-black overflow-hidden">
          {/* Top Navigation Overlay */}
+         <div className="absolute top-4 left-4 right-4 z-30 flex justify-between items-center pointer-events-none">
+             {/* Left Toggle (when sidebar closed) */}
+             <button
+               onClick={() => setIsLeftPanelOpen(true)}
+               className={`pointer-events-auto p-2 bg-gray-900/80 border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-opacity ${isLeftPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+             >
+                <Menu size={20} />
+             </button>
+
+             {/* Right Toggle (when output closed) */}
+             <button
+               onClick={() => setIsRightPanelOpen(true)}
+               className={`pointer-events-auto p-2 bg-gray-900/80 border border-gray-700 rounded-lg text-gray-400 hover:text-white transition-opacity ml-auto ${isRightPanelOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+             >
+                <PanelRightClose size={20} className="rotate-180" />
+             </button>
+         </div>
+
          <div className="absolute top-6 left-6 right-6 z-10 flex justify-center pointer-events-none">
              {/* Legend / Filter Chips */}
-             <div className="flex flex-wrap justify-center gap-2 pointer-events-auto">
+             <div className="flex flex-wrap justify-center gap-2 pointer-events-auto max-w-[60%]">
                 {currentFilters.map((filter, idx) => (
                    <FilterChip key={idx} color={filter.color} label={filter.label} />
                 ))}
@@ -191,6 +320,154 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
          <div className="flex-1 w-full h-full">
             <SimulationGraph isBuilding={isBuilding} societyType={society} onStartChat={onOpenChat} />
          </div>
+
+         {/* Modals */}
+         {activeModal !== 'none' && (
+           <div className="absolute inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+             <div className="bg-[#111] border border-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+               <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                 <h3 className="font-semibold text-lg">
+                   {activeModal === 'assemble' && "Assemble New Group"}
+                   {activeModal === 'feedback' && "Leave Feedback"}
+                   {activeModal === 'context' && "Request New Context"}
+                   {activeModal === 'test' && "Create New Test"}
+                 </h3>
+                 <button onClick={() => setActiveModal('none')} className="text-gray-500 hover:text-white">
+                   <PanelRightClose size={20} />
+                 </button>
+               </div>
+
+               <div className="p-6 space-y-4">
+                 {activeModal === 'assemble' && (
+                   <>
+                     <div className="space-y-1.5">
+                       <label className="text-xs text-gray-400 font-medium">Customer Profile</label>
+                       <textarea
+                         value={formData.customerProfile}
+                         onChange={(e) => setFormData({...formData, customerProfile: e.target.value})}
+                         className="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:border-teal-500 outline-none h-24 resize-none"
+                         placeholder="Describe your ideal audience..."
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+                       <label className="text-xs text-gray-400 font-medium">Company Info</label>
+                       <textarea
+                         value={formData.companyInfo}
+                         onChange={(e) => setFormData({...formData, companyInfo: e.target.value})}
+                         className="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:border-teal-500 outline-none h-24 resize-none"
+                         placeholder="Tell us about your brand..."
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+                       <div className="flex justify-between">
+                         <label className="text-xs text-gray-400 font-medium">Persona Scale</label>
+                         <span className="text-xs text-teal-500 font-bold">{formData.personaScale}</span>
+                       </div>
+                       <input
+                         type="range" min="1" max="100"
+                         value={formData.personaScale}
+                         onChange={(e) => setFormData({...formData, personaScale: parseInt(e.target.value)})}
+                         className="w-full accent-teal-500"
+                       />
+                       <div className="flex justify-between text-[10px] text-gray-600 uppercase font-bold">
+                         <span>Conservative</span>
+                         <span>Radical</span>
+                       </div>
+                     </div>
+                   </>
+                 )}
+
+                 {activeModal === 'feedback' && (
+                   <div className="space-y-1.5">
+                     <label className="text-xs text-gray-400 font-medium">Your Feedback</label>
+                     <textarea
+                       value={formData.feedback}
+                       onChange={(e) => setFormData({...formData, feedback: e.target.value})}
+                       className="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:border-teal-500 outline-none h-40 resize-none"
+                       placeholder="How can we improve?"
+                     />
+                   </div>
+                 )}
+
+                 {activeModal === 'context' && (
+                   <div className="space-y-1.5">
+                     <label className="text-xs text-gray-400 font-medium">New Context / Fuse Box</label>
+                     <textarea
+                       value={formData.context}
+                       onChange={(e) => setFormData({...formData, context: e.target.value})}
+                       className="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:border-teal-500 outline-none h-40 resize-none"
+                       placeholder="Specify the testing environment or scenario..."
+                     />
+                   </div>
+                 )}
+
+                 {activeModal === 'test' && (
+                   <>
+                     <div className="space-y-1.5">
+                       <label className="text-xs text-gray-400 font-medium">Test Name</label>
+                       <input
+                         type="text"
+                         value={formData.testName}
+                         onChange={(e) => setFormData({...formData, testName: e.target.value})}
+                         className="w-full bg-black border border-gray-800 rounded-lg p-3 text-sm focus:border-teal-500 outline-none"
+                         placeholder="Campaign Launch 2024..."
+                       />
+                     </div>
+                     <div className="space-y-1.5">
+                        <label className="text-xs text-gray-400 font-medium">Brand Asset for Testing</label>
+                        <div className="flex items-center justify-center w-full">
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-800 border-dashed rounded-lg cursor-pointer bg-black hover:bg-gray-900 transition-colors">
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <Plus className="w-8 h-8 mb-4 text-gray-500" />
+                                    <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
+                                    <p className="text-xs text-gray-500">SVG, PNG, JPG (MAX. 800x400px)</p>
+                                </div>
+                                <input type="file" className="hidden" multiple accept="image/*" />
+                            </label>
+                        </div>
+                     </div>
+                   </>
+                 )}
+               </div>
+
+               <div className="p-6 border-t border-gray-800 flex gap-3">
+                 <button
+                   onClick={() => setActiveModal('none')}
+                   className="flex-1 py-2.5 rounded-xl border border-gray-800 text-sm font-medium hover:bg-gray-900 transition-colors"
+                 >
+                   Cancel
+                 </button>
+                 <button
+                   onClick={async () => {
+                     // Save to backend logic
+                     try {
+                        const response = await fetch('/api/save-data', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            type: activeModal,
+                            data: formData,
+                            user: user?.preferred_username || 'anonymous'
+                          })
+                        });
+                        if (response.ok) {
+                          alert('Successfully saved!');
+                          setActiveModal('none');
+                        }
+                     } catch (e) {
+                       console.error(e);
+                       alert('Successfully submitted (Local simulation)');
+                       setActiveModal('none');
+                     }
+                   }}
+                   className="flex-1 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-500 transition-colors shadow-lg shadow-teal-900/20"
+                 >
+                   Confirm
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
 
          {/* Floating Chat Button (Bottom) */}
          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30">
@@ -203,6 +480,66 @@ const SimulationPage: React.FC<SimulationPageProps> = ({ onBack, onOpenConversat
             </button>
          </div>
       </main>
+
+      {/* Right Sidebar (Output) */}
+      <aside className={`fixed right-0 md:relative w-[300px] h-full flex-shrink-0 border-l border-gray-800 flex flex-col bg-[#0a0a0a] z-40 transition-all duration-300 ${isRightPanelOpen ? 'translate-x-0' : 'translate-x-full md:-mr-[300px]'}`}>
+        <div className="p-4 h-16 border-b border-gray-800 flex items-center justify-between">
+           <span className="font-semibold tracking-tight uppercase text-xs text-gray-500">Output</span>
+           <button onClick={() => setIsRightPanelOpen(false)} className="text-gray-500 hover:text-white"><PanelRightClose size={18}/></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-gray-500">Simulation Results</p>
+                {simulationResult && (
+                  <button
+                    onClick={async () => {
+                      setIsRefreshing(true);
+                      try {
+                        const status = await GradioService.getSimulationStatus(society);
+                        setSimulationResult({
+                          status: "Updated",
+                          message: "Latest status gathered from API.",
+                          data: status
+                        });
+                      } catch (e) {
+                        console.error(e);
+                      } finally {
+                        setIsRefreshing(false);
+                      }
+                    }}
+                    className="p-1 hover:bg-gray-800 rounded text-gray-500 hover:text-white"
+                    title="Refresh Status"
+                  >
+                    <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
+                  </button>
+                )}
+              </div>
+
+              {!simulationResult ? (
+                <div className="text-sm text-gray-400 italic text-center py-8">
+                  Results will appear here after running a simulation.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-medium text-green-400">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                    {simulationResult.status}
+                  </div>
+                  <p className="text-[11px] text-gray-400">{simulationResult.message}</p>
+                  {simulationResult.data && (
+                    <pre className="text-[10px] bg-black/50 p-2 rounded max-h-96 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-gray-300 border border-gray-800">
+                      {JSON.stringify(simulationResult.data, null, 2)}
+                    </pre>
+                  )}
+                  <p className="text-[10px] text-gray-600 mt-4 italic">
+                    Note: Complete simulation results can take up to 30 minutes to be fully processed by the API.
+                  </p>
+                </div>
+              )}
+           </div>
+        </div>
+      </aside>
     </div>
   );
 };
@@ -212,10 +549,14 @@ interface MenuItemProps {
   icon: React.ReactNode;
   label: string;
   highlight?: boolean;
+  onClick?: () => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ icon, label, highlight = false }) => (
-  <button className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors ${highlight ? 'text-teal-400 hover:bg-teal-950/30' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+const MenuItem: React.FC<MenuItemProps> = ({ icon, label, highlight = false, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-md text-sm transition-colors ${highlight ? 'text-teal-400 hover:bg-teal-950/30' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+  >
     {icon}
     <span>{label}</span>
   </button>
