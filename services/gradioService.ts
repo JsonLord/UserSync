@@ -7,7 +7,10 @@ export class GradioService {
 
   static async getClient() {
     if (!this.client) {
-      this.client = await Client.connect(HF_SPACE);
+      // Use HF Token from environment if available (set via vite define or process.env)
+      // For browser, we check if it was injected during build
+      const token = (import.meta as any).env?.VITE_HF_TOKEN || null;
+      this.client = await Client.connect(HF_SPACE, token ? { hf_token: token } : {});
     }
     return this.client;
   }

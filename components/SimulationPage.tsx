@@ -115,8 +115,12 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
             const uniqueNames = Array.from(new Set(names));
             setSocieties(uniqueNames);
 
-            if (uniqueNames.length > 0 && (!society || !uniqueNames.includes(society))) {
+            if (uniqueNames.length > 0) {
+              if (!society || !uniqueNames.includes(society)) {
                 setSociety(uniqueNames[0]);
+              }
+            } else {
+              setSociety('Standard Example');
             }
         } catch (e) {
             console.error("Failed to fetch focus groups", e);
@@ -448,11 +452,11 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                        setIsBuilding(true);
                        try {
                          // 1. Generate personas based on profile and company info
-                         const personas = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, 5);
+                         const personas = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, Math.ceil(formData.personaScale / 20));
 
                          // 2. Generate social network for these personas
                          const groupName = formData.customerProfile.substring(0, 20);
-                         await GradioService.generateSocialNetwork(groupName, 10, 'scale_free', groupName);
+                         await GradioService.generateSocialNetwork(groupName, formData.personaScale, 'scale_free', groupName);
 
                          // 3. Save to backend
                          await fetch('/api/save-data', {

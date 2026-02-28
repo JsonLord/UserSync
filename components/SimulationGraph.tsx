@@ -28,8 +28,8 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
       let edges: any[] = [];
 
       try {
-        // Attempt to fetch real network data
-        const networkData = await GradioService.getNetworkGraph(societyType);
+        // Attempt to fetch real network data if societyType is provided
+        const networkData = societyType ? await GradioService.getNetworkGraph(societyType) : null;
         if (networkData && networkData.nodes) {
           nodes = networkData.nodes.map((n: any) => ({
             ...n,
