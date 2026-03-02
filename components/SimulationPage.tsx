@@ -450,6 +450,8 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                    onClick={async () => {
                      if (activeModal === 'assemble') {
                        setIsBuilding(true);
+                       setIsRightPanelOpen(true);
+                       setActiveModal('none');
                        try {
                          // 1. Generate personas based on profile and company info
                          const personas = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, Math.ceil(formData.personaScale / 20));
@@ -472,12 +474,10 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                          // 4. Update UI
                          setSocieties(prev => [groupName, ...prev]);
                          setSociety(groupName);
-                         setActiveModal('none');
                          alert('Focus group assembled and selected!');
                        } catch (e) {
                          console.error(e);
-                         alert('Failed to assemble group via API. Falling back to local save.');
-                         setActiveModal('none');
+                         alert('Failed to assemble group via API.');
                        } finally {
                          setIsBuilding(false);
                        }
@@ -533,6 +533,18 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
            <button onClick={() => setIsRightPanelOpen(false)} className="text-gray-500 hover:text-white"><PanelRightClose size={18}/></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+           {isBuilding && (
+             <div className="bg-teal-900/20 border border-teal-500/30 rounded-xl p-4 mb-4 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-3">
+                   <RefreshCw className="w-4 h-4 text-teal-400 animate-spin" />
+                   <div className="flex flex-col">
+                      <span className="text-xs font-bold text-teal-400">Assembling...</span>
+                      <span className="text-[10px] text-teal-400/60 font-mono">Constructing network mesh</span>
+                   </div>
+                </div>
+             </div>
+           )}
+
            <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs text-gray-500">Simulation Results</p>

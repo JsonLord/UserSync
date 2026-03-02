@@ -6,6 +6,7 @@ colorTo: blue
 sdk: docker
 app_port: 7860
 hf_oauth: true
+persistent_storage: true
 ---
 
 <div align="center">

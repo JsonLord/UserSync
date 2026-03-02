@@ -177,14 +177,6 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
 
   return (
     <div className="relative w-full h-full bg-black">
-      {/* Loading Overlay */}
-      {isBuilding && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300">
-           <div className="w-16 h-16 border-4 border-teal-900 border-t-teal-500 rounded-full animate-spin mb-4"></div>
-           <p className="text-teal-400 font-mono animate-pulse">Constructing Focus Group Graph...</p>
-        </div>
-      )}
-
       {/* The Graph */}
       <div ref={graphDiv} className="w-full h-full" />
 
