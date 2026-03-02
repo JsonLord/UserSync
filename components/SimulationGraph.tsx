@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Plotly from 'plotly.js';
-import { X, Linkedin, Globe, MapPin, User, Briefcase, Users } from 'lucide-react';
+import { X, Linkedin, Globe, MapPin, User, Briefcase, Users, Loader2 } from 'lucide-react';
 import Button from './ui/Button';
+import { GradioService } from '../services/gradioService';
 
 interface SimulationGraphProps {
   isBuilding: boolean;
   societyType: string;
+  viewMode: string;
   onStartChat?: () => void;
 }
 
-const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyType, onStartChat }) => {
+const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyType, viewMode, onStartChat }) => {
   const graphDiv = useRef<HTMLDivElement>(null);
   const [selectedProfile, setSelectedProfile] = useState<{ x: number, y: number, data: any } | null>(null);
 
@@ -19,123 +21,162 @@ const SimulationGraph: React.FC<SimulationGraphProps> = ({ isBuilding, societyTy
   }, [isBuilding]);
 
   useEffect(() => {
-    if (!graphDiv.current || isBuilding) return;
+    const renderGraph = async () => {
+      if (!graphDiv.current || isBuilding) return;
 
-    // --- Dynamic Data Generation based on Society Type ---
-    const isTech = societyType.includes('Tech') || societyType.includes('Founders');
-    
-    const N = isTech ? 120 : 80; 
-    const radius = isTech ? 0.18 : 0.22; 
-    const nodes = [];
+      let nodes: any[] = [];
+      let edges: any[] = [];
 
-    // Create nodes
-    for (let i = 0; i < N; i++) {
-      nodes.push({
-        x: Math.random(),
-        y: Math.random(),
-        connections: 0,
-        // Mock data for the popup
-        role: isTech ? ['Founder', 'CTO', 'Product Lead', 'VC'][Math.floor(Math.random() * 4)] : ['Journalist', 'Reader', 'Editor', 'Subscriber'][Math.floor(Math.random() * 4)],
-        location: ['New York, USA', 'London, UK', 'Berlin, DE', 'Paris, FR'][Math.floor(Math.random() * 4)]
-      });
-    }
+      try {
+        // Attempt to fetch real network data if societyType is provided
+        const networkData = societyType ? await GradioService.getNetworkGraph(societyType) : null;
+        if (networkData && networkData.nodes) {
+          nodes = networkData.nodes.map((n: any) => ({
+            ...n,
+            x: n.x || Math.random(),
+            y: n.y || Math.random(),
+            role: n.name || n.id || 'Persona',
+            location: n.location || 'Unknown'
+          }));
+          edges = networkData.edges || [];
+        }
+      } catch (e) {
+        console.warn("Failed to fetch real network, falling back to mock.");
+      }
 
-    // Create edges
-    const edgeX: (number | null)[] = [];
-    const edgeY: (number | null)[] = [];
-    
-    for (let i = 0; i < N; i++) {
-      for (let j = i + 1; j < N; j++) {
-        const dx = nodes[i].x - nodes[j].x;
-        const dy = nodes[i].y - nodes[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < radius) {
-          nodes[i].connections++;
-          nodes[j].connections++;
-          edgeX.push(nodes[i].x, nodes[j].x, null);
-          edgeY.push(nodes[i].y, nodes[j].y, null);
+      // Fallback to mock data if no real data
+      if (nodes.length === 0) {
+        const safeSocietyType = typeof societyType === 'string' ? societyType : '';
+        const isTech = safeSocietyType.includes('Tech') || safeSocietyType.includes('Founders');
+        const N = isTech ? 120 : 80;
+        const radius = isTech ? 0.18 : 0.22;
+
+        for (let i = 0; i < N; i++) {
+          nodes.push({
+            x: Math.random(),
+            y: Math.random(),
+            connections: 0,
+            role: isTech ? ['Founder', 'CTO', 'Product Lead', 'VC'][Math.floor(Math.random() * 4)] : ['Journalist', 'Reader', 'Editor', 'Subscriber'][Math.floor(Math.random() * 4)],
+            location: ['New York, USA', 'London, UK', 'Berlin, DE', 'Paris, FR'][Math.floor(Math.random() * 4)]
+          });
+        }
+
+        for (let i = 0; i < N; i++) {
+          for (let j = i + 1; j < N; j++) {
+            const dx = nodes[i].x - nodes[j].x;
+            const dy = nodes[i].y - nodes[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < radius) {
+              nodes[i].connections++;
+              nodes[j].connections++;
+              edges.push({ source: i, target: j });
+            }
+          }
         }
       }
-    }
 
-    const nodeX = nodes.map(n => n.x);
-    const nodeY = nodes.map(n => n.y);
-    const nodeColor = nodes.map(n => n.connections); 
-
-    // --- Plotly Config ---
-    const edgeTrace = {
-      x: edgeX,
-      y: edgeY,
-      mode: 'lines',
-      line: { width: 0.5, color: '#4b5563' },
-      hoverinfo: 'none',
-      type: 'scatter'
-    };
-
-    const nodeTrace = {
-      x: nodeX,
-      y: nodeY,
-      mode: 'markers',
-      hoverinfo: 'none', 
-      marker: {
-        showscale: false,
-        colorscale: isTech ? 'Electric' : 'Viridis',
-        color: nodeColor,
-        size: 10,
-        line: { width: 0 }
-      },
-      type: 'scatter'
-    };
-
-    const layout = {
-      showlegend: false,
-      hovermode: 'closest',
-      margin: { b: 0, l: 0, r: 0, t: 0 },
-      xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-0.05, 1.05], fixedrange: true },
-      yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-0.05, 1.05], fixedrange: true },
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      autosize: true,
-      dragmode: false 
-    };
-
-    const config = { 
-      staticPlot: false, 
-      displayModeBar: false, 
-      responsive: true 
-    };
-
-    // @ts-ignore
-    Plotly.newPlot(graphDiv.current, [edgeTrace, nodeTrace], layout, config).then((gd) => {
-      // @ts-ignore
-      gd.on('plotly_click', (data) => {
-        const point = data.points[0];
-        if (point) {
-           const nodeIndex = point.pointNumber;
-           const nodeData = nodes[nodeIndex];
-           
-           setSelectedProfile({
-               x: point.x, 
-               y: point.y,
-               data: nodeData
-           });
+      const edgeX: (number | null)[] = [];
+      const edgeY: (number | null)[] = [];
+      edges.forEach(edge => {
+        const source = nodes[edge.source];
+        const target = nodes[edge.target];
+        if (source && target) {
+          edgeX.push(source.x, target.x, null);
+          edgeY.push(source.y, target.y, null);
         }
       });
-    });
 
-  }, [isBuilding, societyType]);
+      const nodeX = nodes.map(n => n.x);
+      const nodeY = nodes.map(n => n.y);
+
+      // Determine node colors based on viewMode
+      const nodeColor = nodes.map(n => {
+        if (viewMode === 'Sentiment') {
+           const s = n.sentiment || 'Neutral';
+           if (s === 'Positive') return 1;
+           if (s === 'Negative') return 2;
+           if (s === 'Mixed') return 3;
+           return 0; // Neutral
+        }
+        if (viewMode === 'Activity Level') {
+           const a = n.activity || 'Lurker';
+           if (a === 'Power User') return 1;
+           if (a === 'Daily Active') return 2;
+           if (a === 'Weekly Active') return 3;
+           return 0;
+        }
+        if (viewMode === 'Job Title') {
+           // Assign numeric index based on role string hash or predefined mapping
+           const roles = ["Founder", "Product Manager", "Engineer", "Investor", "Designer"];
+           const idx = roles.indexOf(n.role);
+           return idx >= 0 ? idx : (n.role ? n.role.length % 5 : 0);
+        }
+        if (viewMode === 'Country') {
+           const countries = ["United States", "United Kingdom", "Netherlands", "France", "India"];
+           const loc = n.location || '';
+           const idx = countries.findIndex(c => loc.includes(c));
+           return idx >= 0 ? idx : (loc ? loc.length % 5 : 0);
+        }
+        return n.connections || 0;
+      });
+
+      const edgeTrace = {
+        x: edgeX,
+        y: edgeY,
+        mode: 'lines',
+        line: { width: 0.5, color: '#4b5563' },
+        hoverinfo: 'none',
+        type: 'scatter'
+      };
+
+      const nodeTrace = {
+        x: nodeX,
+        y: nodeY,
+        mode: 'markers',
+        hoverinfo: 'none',
+        marker: {
+          showscale: false,
+          colorscale: 'Electric',
+          color: nodeColor,
+          size: 10,
+          line: { width: 0 }
+        },
+        type: 'scatter'
+      };
+
+      const layout = {
+        showlegend: false,
+        hovermode: 'closest',
+        margin: { b: 0, l: 0, r: 0, t: 0 },
+        xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-0.05, 1.05], fixedrange: true },
+        yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [-0.05, 1.05], fixedrange: true },
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        autosize: true,
+        dragmode: false
+      };
+
+      const config = { staticPlot: false, displayModeBar: false, responsive: true };
+
+      // @ts-ignore
+      Plotly.newPlot(graphDiv.current, [edgeTrace, nodeTrace], layout, config).then((gd) => {
+        // @ts-ignore
+        gd.on('plotly_click', (data) => {
+          const point = data.points[0];
+          if (point) {
+            const nodeIndex = point.pointNumber;
+            const nodeData = nodes[nodeIndex];
+            setSelectedProfile({ x: point.x, y: point.y, data: nodeData });
+          }
+        });
+      });
+    };
+
+    renderGraph();
+  }, [isBuilding, societyType, viewMode]);
 
   return (
     <div className="relative w-full h-full bg-black">
-      {/* Loading Overlay */}
-      {isBuilding && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300">
-           <div className="w-16 h-16 border-4 border-teal-900 border-t-teal-500 rounded-full animate-spin mb-4"></div>
-           <p className="text-teal-400 font-mono animate-pulse">Constructing Focus Group Graph...</p>
-        </div>
-      )}
-
       {/* The Graph */}
       <div ref={graphDiv} className="w-full h-full" />
 
