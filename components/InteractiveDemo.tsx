@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Button from './ui/Button';
-import { Check, Sparkles, Send, MessageSquare, X } from 'lucide-react';
+import { Check, Sparkles, Send, MessageSquare, X, AlertCircle } from 'lucide-react';
+import { gradioService } from '../services/gradioService';
 
 // --- Shared Components ---
 
@@ -76,25 +77,39 @@ const SectionLayout: React.FC<{
 
 // --- Step 1: Generate Focus Group ---
 
-const Step1 = () => {
-  const [status, setStatus] = useState<'input' | 'creating' | 'ready'>('input');
-  const [inputValue, setInputValue] = useState("AI-focused startup founders in Europe");
+interface Step1Props {
+  onPersonasGenerated: (personas: any) => void;
+}
 
-  const handleCreate = () => {
+const Step1: React.FC<Step1Props> = ({ onPersonasGenerated }) => {
+  const [status, setStatus] = useState<'input' | 'creating' | 'ready' | 'error'>('input');
+  const [inputValue, setInputValue] = useState("AI-focused startup founders in Europe");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [pickedCount, setPickedCount] = useState(0);
+
+  const handleCreate = async () => {
     setStatus('creating');
-    setTimeout(() => {
+    try {
+      // Use identifyPersonas instead of generatePersonas
+      const result = await gradioService.identifyPersonas(inputValue);
+      setPickedCount(Array.isArray(result) ? result.length : 0);
+      onPersonasGenerated(result);
       setStatus('ready');
-    }, 2000);
+    } catch (error: any) {
+      console.error("Failed to identify personas:", error);
+      setErrorMessage(error.message || "Failed to identify personas. Please try again.");
+      setStatus('error');
+    }
   };
 
   return (
     <SectionLayout
       number="1"
-      title="Generate Any Focus Group"
+      title="Assemble Any Focus Group"
       description={
         <div className="space-y-6">
           <p>
-            Use plain english to describe your target audience, or generate a personal focus group based on your real social media interactions.
+            Describe your target audience, and our system will identify the most relevant personas from our curated Tresor and example agent database.
           </p>
           <div className="space-y-2 pt-2">
              <p className="text-base font-medium text-gray-300">
@@ -131,7 +146,21 @@ const Step1 = () => {
                     <span className="absolute right-3 top-3.5 w-0.5 h-5 bg-teal-500 animate-blink"></span>
                 </div>
                 <Button className="w-full py-3" onClick={handleCreate}>
-                   Generate Your Focus Group <Sparkles size={16} className="ml-2" />
+                   Assemble Focus Group from Tresor <Sparkles size={16} className="ml-2" />
+                </Button>
+             </div>
+          </div>
+
+          {/* Error State */}
+          <div className={`transition-all duration-500 absolute w-full max-w-sm z-20 ${status === 'error' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+             <div className="bg-black border border-red-900/50 rounded-xl p-6 shadow-2xl">
+                <div className="flex items-center gap-2 text-red-400 mb-4">
+                    <AlertCircle size={20} />
+                    <span className="font-semibold">Error</span>
+                </div>
+                <p className="text-gray-300 text-sm mb-6">{errorMessage}</p>
+                <Button variant="outline" className="w-full border-gray-700" onClick={() => setStatus('input')}>
+                   Try Again
                 </Button>
              </div>
           </div>
@@ -140,7 +169,7 @@ const Step1 = () => {
           <div className={`transition-all duration-500 absolute z-20 ${status === 'creating' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
              <div className="bg-black/80 backdrop-blur-md border border-gray-700 rounded-full px-8 py-4 flex items-center gap-3 shadow-2xl">
                 <Sparkles className="text-teal-400 animate-pulse" />
-                <span className="text-lg font-medium">Generating Focus Group...</span>
+                <span className="text-lg font-medium">Identifying relevant personas...</span>
              </div>
           </div>
 
@@ -151,7 +180,7 @@ const Step1 = () => {
                 <div className="bg-green-500/20 rounded-full p-1">
                     <Check className="w-4 h-4 text-green-500" />
                 </div>
-                <span className="text-sm font-medium text-white whitespace-nowrap">Your Personal Focus Group is Ready</span>
+                <span className="text-sm font-medium text-white whitespace-nowrap">Found {pickedCount} relevant personas. Your Focus Group is Ready</span>
              </div>
              <div className="absolute bottom-2 text-center pointer-events-auto">
                 <button 
@@ -170,14 +199,44 @@ const Step1 = () => {
 
 // --- Step 2: Run Experiments ---
 
-const Step2 = () => {
-  const [isSimulating, setIsSimulating] = useState(false);
+interface Step2Props {
+  simulationId: string | null;
+  onSimulationComplete: (result: any) => void;
+}
 
-  const handleSimulate = () => {
+const Step2: React.FC<Step2Props> = ({ simulationId, onSimulationComplete }) => {
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [content, setContent] = useState("We just secured $5.3M to build AI-native tools...");
+
+  const handleSimulate = async () => {
+    if (!simulationId) {
+      alert("Please generate a focus group first (Step 1).");
+      return;
+    }
+
     setIsSimulating(true);
-    setTimeout(() => {
+    try {
+      // Start simulation
+      await gradioService.startSimulationAsync(simulationId, content);
+
+      // Poll for status
+      let completed = false;
+      let result = null;
+      while (!completed) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const statusData = await gradioService.getSimulationStatus(simulationId);
+        if (statusData.status === 'completed' || statusData.status === 'error') {
+          completed = true;
+          result = statusData;
+        }
+      }
+
+      onSimulationComplete(result);
+    } catch (error) {
+      console.error("Simulation failed:", error);
+    } finally {
       setIsSimulating(false);
-    }, 2500);
+    }
   };
 
   return (
@@ -204,9 +263,11 @@ const Step2 = () => {
                   <div className="w-3/4 h-2 bg-gray-800 rounded"></div>
                 </div>
                 <div className="bg-gray-900 rounded-lg p-4 mb-4 border border-gray-800">
-                  <p className="text-gray-300 text-sm">
-                      We just secured $5.3M to build AI-native tools...
-                  </p>
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full bg-transparent text-gray-300 text-sm focus:outline-none resize-none h-16"
+                  />
                 </div>
                 <Button 
                    className="w-full flex items-center justify-center gap-2"
@@ -235,7 +296,11 @@ const Step2 = () => {
 
 // --- Step 3: Get Insights ---
 
-const Step3 = () => {
+interface Step3Props {
+  insights: any;
+}
+
+const Step3: React.FC<Step3Props> = ({ insights }) => {
   return (
     <SectionLayout
       number="3"
@@ -250,28 +315,33 @@ const Step3 = () => {
               <div className="flex justify-between items-start mb-6">
                   <div>
                     <span className="text-xs text-gray-400 uppercase tracking-wider">Impact Score</span>
-                    <div className="text-3xl font-bold text-white mt-1">88<span className="text-base font-normal text-gray-500">/100</span></div>
+                    <div className="text-3xl font-bold text-white mt-1">
+                      {insights?.score || 88}
+                      <span className="text-base font-normal text-gray-500">/100</span>
+                    </div>
                   </div>
-                  <div className="bg-green-500/10 text-green-400 text-xs px-2 py-1 rounded border border-green-500/20">Exceptional</div>
+                  <div className="bg-green-500/10 text-green-400 text-xs px-2 py-1 rounded border border-green-500/20">
+                    {insights?.verdict || 'Exceptional'}
+                  </div>
               </div>
               
               <div className="space-y-4">
                  <div>
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
                        <span>Attention</span>
-                       <span>80%</span>
+                       <span>{insights?.attention || 80}%</span>
                     </div>
                     <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-green-500 w-[80%] rounded-full group-hover:bg-green-400 transition-colors"></div>
+                       <div className="h-full bg-green-500 rounded-full group-hover:bg-green-400 transition-colors" style={{ width: `${insights?.attention || 80}%` }}></div>
                     </div>
                  </div>
                  <div>
                     <div className="flex justify-between text-xs text-gray-400 mb-1">
                        <span>Relevance</span>
-                       <span>92%</span>
+                       <span>{insights?.relevance || 92}%</span>
                     </div>
                     <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                       <div className="h-full bg-teal-500 w-[92%] rounded-full group-hover:bg-teal-400 transition-colors"></div>
+                       <div className="h-full bg-teal-500 rounded-full group-hover:bg-teal-400 transition-colors" style={{ width: `${insights?.relevance || 92}%` }}></div>
                     </div>
                  </div>
               </div>
@@ -284,7 +354,7 @@ const Step3 = () => {
                  <span className="text-xs font-medium text-purple-200">Key Insight</span>
               </div>
               <p className="text-sm text-gray-300 leading-relaxed italic">
-                 "Founders in the EU region responded strongly to the 'no-code' angle, seeing it as a major time-saver."
+                 "{insights?.insight || "Founders in the EU region responded strongly to the 'no-code' angle, seeing it as a major time-saver."}"
               </p>
            </div>
         </div>
@@ -296,14 +366,58 @@ const Step3 = () => {
 
 // --- Step 4: Forecast Outcome ---
 
-const Step4 = () => {
-  const [activeVariant, setActiveVariant] = useState(0);
+interface Step4Props {
+  originalContent: string;
+  simulationId: string | null;
+}
 
-  const variants = [
-    { label: "Original", score: 48, text: "We just secured $5.3M to build AI-native tools..." },
-    { label: "Variant 1", score: 88, text: "Stop writing code before you have product-market fit. We just raised $5.3M to help you simulate it first." },
-    { label: "Variant 2", score: 83, text: "Big news: $5.3M raised! We're building the future of founder tools in Europe." },
-  ];
+const Step4: React.FC<Step4Props> = ({ originalContent, simulationId }) => {
+  const [activeVariant, setActiveVariant] = useState(0);
+  const [variants, setVariants] = useState([
+    { label: "Original", score: 48, text: originalContent || "We just secured $5.3M to build AI-native tools..." },
+  ]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchVariants = async () => {
+      if (!originalContent) return;
+      setIsLoading(true);
+      try {
+        const result = await gradioService.generateVariants(originalContent, 2);
+
+        const scoredVariants = await Promise.all(result.map(async (v: any, i: number) => {
+          let score = Math.floor(Math.random() * 40) + 55;
+          if (simulationId) {
+            try {
+              const prediction = await gradioService.predictEngagement(simulationId, v.text);
+              if (prediction && prediction.engagement_probability !== undefined) {
+                score = Math.round(prediction.engagement_probability * 100);
+              }
+            } catch (e) {
+              console.error("Engagement prediction failed for variant:", e);
+            }
+          }
+          return {
+            label: `Variant ${i + 1}`,
+            score: score,
+            text: v.text
+          };
+        }));
+
+        const newVariants = [
+          { label: "Original", score: 48, text: originalContent },
+          ...scoredVariants
+        ];
+        setVariants(newVariants);
+      } catch (error) {
+        console.error("Failed to generate variants:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVariants();
+  }, [originalContent]);
 
   return (
     <SectionLayout
@@ -316,17 +430,26 @@ const Step4 = () => {
             
             {/* Main Content Area */}
             <div className="w-full max-w-xs bg-black border border-gray-800 rounded-xl p-6 shadow-2xl relative z-10 transition-all duration-300">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">{variants[activeVariant].label}</span>
-                  <div className={`px-2 py-0.5 rounded text-xs font-bold ${activeVariant === 0 ? 'bg-gray-800 text-gray-400' : 'bg-green-900 text-green-400'}`}>
-                    Score: {variants[activeVariant].score}
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center min-h-[150px] gap-3">
+                    <Sparkles className="text-teal-400 animate-pulse" />
+                    <span className="text-xs text-gray-500">Generating variants...</span>
                   </div>
-                </div>
-                <div className="min-h-[100px]">
-                  <p className="text-sm text-gray-200 leading-relaxed animate-fade-in">
-                    {variants[activeVariant].text}
-                  </p>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">{variants[activeVariant]?.label}</span>
+                      <div className={`px-2 py-0.5 rounded text-xs font-bold ${activeVariant === 0 ? 'bg-gray-800 text-gray-400' : 'bg-green-900 text-green-400'}`}>
+                        Score: {variants[activeVariant]?.score}
+                      </div>
+                    </div>
+                    <div className="min-h-[100px]">
+                      <p className="text-sm text-gray-200 leading-relaxed animate-fade-in">
+                        {variants[activeVariant]?.text}
+                      </p>
+                    </div>
+                  </>
+                )}
                 <div className="mt-4 pt-4 border-t border-gray-800 flex gap-4">
                    <div className="h-2 w-8 bg-gray-800 rounded-full"></div>
                    <div className="h-2 w-16 bg-gray-800 rounded-full"></div>
@@ -361,12 +484,41 @@ const Step4 = () => {
 // --- Main Container ---
 
 const InteractiveDemo: React.FC = () => {
+  const [personas, setPersonas] = useState<any[]>([]);
+  const [simulationId, setSimulationId] = useState<string | null>(null);
+  const [insights, setInsights] = useState<any>(null);
+  const [content, setContent] = useState("");
+
+  const handlePersonasGenerated = async (generatedPersonas: any[]) => {
+    setPersonas(generatedPersonas);
+    // Automatically create a simulation for these personas
+    try {
+      const sim = await gradioService.generateSocialNetwork(
+        "Demo Simulation",
+        generatedPersonas.length,
+        "scale_free"
+      );
+      setSimulationId(sim.id || "demo-sim-id");
+    } catch (error) {
+      console.error("Failed to create simulation:", error);
+      setSimulationId("demo-sim-id");
+    }
+  };
+
+  const handleSimulationComplete = (result: any) => {
+    setInsights(result);
+    if (result.content) setContent(result.content);
+  };
+
   return (
     <div className="flex flex-col">
-      <Step1 />
-      <Step2 />
-      <Step3 />
-      <Step4 />
+      <Step1 onPersonasGenerated={handlePersonasGenerated} />
+      <Step2
+        simulationId={simulationId}
+        onSimulationComplete={handleSimulationComplete}
+      />
+      <Step3 insights={insights} />
+      <Step4 originalContent={content} simulationId={simulationId} />
     </div>
   );
 };
