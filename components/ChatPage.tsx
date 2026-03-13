@@ -151,6 +151,7 @@ const ChatInput: React.FC<{ onSimulate: (msg: string) => void; onHelpMeCraft: (m
 const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimulationResult }) => {
   const [showNotification, setShowNotification] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [simulationId, setSimulationId] = useState<string>('User Group 1');
   const [selectedVariation, setSelectedVariation] = useState<string>('');
   const [showContextModal, setShowContextModal] = useState(false);
@@ -184,6 +185,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
 
     try {
       const result = await GradioService.startSimulationAsync(simulationId, msg);
+      setCurrentJobId(result);
       setIsSimulating(false);
       const resData = {
         status: "Initiated",
@@ -218,7 +220,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ onBack, simulationResult, setSimula
   const handleRefresh = async () => {
     setIsSimulating(true);
     try {
-      const status = await GradioService.getSimulationStatus(simulationId);
+      const status = await GradioService.getSimulationStatus(currentJobId || simulationId);
       setIsSimulating(false);
       const resData = {
         status: "Updated",
