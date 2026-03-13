@@ -83,6 +83,7 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
             // 1. Fetch from Gradio (Templates/Global)
             const result = await GradioService.listSimulations();
             const list = Array.isArray(result) ? result : (result?.data?.[0] || []);
+            // GradioService now returns the array of focus group objects directly
 
             if (Array.isArray(list)) {
                 const gradioNames = list
@@ -454,7 +455,8 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                        setActiveModal('none');
                        try {
                          // 1. Generate personas based on profile and company info
-                         const personas = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, Math.ceil(formData.personaScale / 20));
+                         const jobRes = await GradioService.generatePersonas(formData.companyInfo, formData.customerProfile, Math.ceil(formData.personaScale / 20));
+                         const personas = [jobRes.job_id];
 
                          // 2. Generate social network for these personas
                          const groupName = formData.customerProfile.substring(0, 20);
@@ -553,7 +555,12 @@ const SimulationPage: React.FC<SimulationPageProps> = ({
                     onClick={async () => {
                       setIsRefreshing(true);
                       try {
-                        const status = await GradioService.getSimulationStatus(society);
+                        // In SimulationPage we don't track the running simulation's job ID.
+                        // To get the status, we would need the job ID returned by startSimulation.
+                        // If we are polling for the group assembly job, we might need to store it.
+                        // For now we try to poll with the group name, though it may fail if it's not a job ID.
+                        // Ensure that we poll only if society contains a job ID. If it is a group name, getSimulationStatus will fail on the new API.
+                        const status = await GradioService.getSimulationStatus(simulationResult?.job_id || society);
                         setSimulationResult({
                           status: "Updated",
                           message: "Latest status gathered from API.",
