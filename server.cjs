@@ -218,6 +218,86 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+app.get('/api-docs', (req, res) => {
+  const docs = {
+    endpoints: [
+      {
+        path: '/api/craft',
+        method: 'POST',
+        purpose: 'Run model inference via Blablador API to craft content.',
+        request: {
+          content: 'string (required)',
+          variation: 'string (optional, e.g., "social media post")'
+        },
+        response: {
+          result: 'string'
+        }
+      },
+      {
+        path: '/api/config',
+        method: 'GET',
+        purpose: 'Retrieve OAuth configuration.',
+        response: {
+          clientId: 'string',
+          scopes: 'string'
+        }
+      },
+      {
+        path: '/login',
+        method: 'GET',
+        purpose: 'Initiate Hugging Face OAuth login flow.'
+      },
+      {
+        path: '/oauth/callback',
+        method: 'GET',
+        purpose: 'OAuth callback handler.'
+      },
+      {
+        path: '/api/user',
+        method: 'GET',
+        purpose: 'Get authenticated user information.',
+        response: 'JSON object with HF user info'
+      },
+      {
+        path: '/api/logout',
+        method: 'GET',
+        purpose: 'Logout user and clear session.'
+      },
+      {
+        path: '/api/save-data',
+        method: 'POST',
+        purpose: 'Save simulation data.',
+        request: {
+          type: 'string',
+          data: 'any',
+          user: 'string'
+        },
+        response: {
+          success: 'boolean',
+          message: 'string'
+        }
+      },
+      {
+        path: '/api/list-data',
+        method: 'GET',
+        purpose: 'List saved simulation data.',
+        query: {
+          type: 'string (optional)',
+          user: 'string (optional)'
+        },
+        response: 'Array of saved data objects'
+      },
+      {
+        path: '/health',
+        method: 'GET',
+        purpose: 'Health check endpoint.',
+        response: 'OK'
+      }
+    ]
+  };
+  res.json(docs);
+});
+
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });

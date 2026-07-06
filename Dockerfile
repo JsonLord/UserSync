@@ -1,10 +1,3 @@
-FROM node:20-slim AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
 FROM node:20-slim
 WORKDIR /app
 
@@ -15,8 +8,8 @@ ENV HOME=/home/node \
 
 WORKDIR $HOME/app
 
-COPY --from=build --chown=node:node /app/dist ./dist
-COPY --from=build --chown=node:node /app/package*.json ./
+COPY --chown=node:node dist ./dist
+COPY --chown=node:node package*.json ./
 RUN npm install --only=production
 COPY --chown=node:node server.cjs ./
 

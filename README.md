@@ -1,5 +1,5 @@
 ---
-title: Branding Content Testing
+title: UserSyncFrontend
 emoji: 🔄
 colorFrom: blue
 colorTo: blue
